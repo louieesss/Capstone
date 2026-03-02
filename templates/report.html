@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{% set active = "report" %}
+{% block title %}Report — Pollination System{% endblock %}
+{% block page_title %}📋 Detection Report{% endblock %}
+
+{% block content %}
+<style>
+  .rep-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px;}
+  .stat-card{padding:14px 16px;}
+  .stat-val{font-size:2rem;font-weight:700;font-family:'JetBrains Mono',monospace;line-height:1;margin:6px 0 2px;}
+  .stat-label{font-size:0.65rem;color:#475569;text-transform:uppercase;letter-spacing:0.08em;}
+
+  .snap-thumb{aspect-ratio:1;border-radius:6px;overflow:hidden;cursor:pointer;
+    border:1px solid rgba(255,255,255,0.06);transition:border-color 0.15s,transform 0.15s;}
+  .snap-thumb:hover{border-color:rgba(0,200,255,0.4);transform:scale(1.04);}
+  .snap-thumb img{width:100%;height:100%;object-fit:cover;}
+
+  .tbl-row{border-bottom:1px solid rgba(255,255,255,0.04);transition:background 0.1s;}
+  .tbl-row:hover{background:rgba(0,200,255,0.04);}
+</style>
+
+<!-- ── Summary cards ── -->
+<div class="rep-grid">
+  <div class="panel stat-card">
+    <div class="stat-label">Total Detections</div>
+    <div class="stat-val" style="color:#e2e8f0;">{{ total }}</div>
+    <div style="font-size:0.68rem;color:#334155;">Session: {{ session_start }}</div>
+  </div>
+  <div class="panel stat-card">
+    <div class="stat-label">Auto-Snapshots Saved</div>
+    <div class="stat-val" style="color:#60a5fa;">{{ total_snaps }}</div>
+    <div style="font-size:0.68rem;color:#334155;">Location: snapshots/</div>
+  </div>
+  <div class="panel stat-card">
+    <div class="stat-label">Dominant Class</div>
+    {% set dominant = counts | dictsort(by='value') | last %}
+    <div class="stat-val" style="color:
+      {% if dominant[0]=='pollinating' %}#34d399
+      {% elif dominant[0]=='pollinated' %}#60a5fa
+      {% else %}#f87171{% endif %};">
+      {{ dominant[1] if total > 0 else '—' }}
+    </div>
+    <div style="font-size:0.68rem;color:#334155;">
+      {{ class_labels[dominant[0]] if total > 0 else 'No data' }}
+    </div>
+  </div>
+</div>
+
+<!-- ── Charts + breakdown ── -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+
+  <!-- Doughnut chart -->
+  <div class="panel" style="padding:14px;">
+    <div class="panel-head" style="padding:0 0 10px;">Class Distribution</div>
+    <div style="height:200px;display:flex;align-items:center;justify-content:center;">
+      <canvas id="donut-chart"></canvas>
+    </div>
+  </div>
+
+  <!-- Bar breakdown -->
+  <div class="panel" style="padding:14px;">
+    <div class="panel-head" style="padding:0 0 12px;">Count per Class</div>
+    {% for cname in class_names %}
+    {% set cnt = counts[cname] %}
+    {% set pct = (cnt / total * 100) if total > 0 else 0 %}
+    <div style="margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;font-size:0.75rem;margin-bottom:4px;">
+        <span style="color:#94a3b8;">{{ class_labels[cname] }}</span>
+        <span style="font-family:'JetBrains Mono',monospace;color:{{ class_hex[cname] }};">
+          {{ cnt }} &nbsp;<span style="color:#334155;">({{ '%.1f'|format(pct) }}%)</span>
+        </span>
+      </div>
+      <div style="background:#0f1c2e;border-radius:4px;height:10px;overflow:hidden;">
+        <div style="height:100%;width:{{ '%.1f'|format(pct) }}%;border-radius:4px;
+          background:{{ class_hex[cname] }};opacity:0.8;transition:width 0.6s;"></div>
+      </div>
+    </div>
+    {% endfor %}
+    {% if total == 0 %}
+    <p style="color:#334155;font-size:0.75rem;text-align:center;padding:20px 0;">No detections yet. Start the camera.</p>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ── Snapshot gallery ── -->
+{% if snapshot_list %}
+<div class="panel" style="padding:14px;margin-bottom:12px;">
+  <div class="panel-head" style="padding:0 0 10px;">
+    Snapshot Gallery
+    <span style="color:#334155;font-weight:400;margin-left:8px;">{{ snapshot_list|length }} images</span>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(8,1fr);gap:8px;">
+    {% for fn in snapshot_list %}
+    <div class="snap-thumb" onclick="openLB('/snapshots/{{ fn }}')">
+      <img src="/snapshots/{{ fn }}" alt="{{ fn }}" loading="lazy"/>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- ── History table ── -->
+<div class="panel" style="padding:14px;">
+  <div class="panel-head" style="padding:0 0 10px;">
+    Detection Log
+    <span style="color:#334155;font-weight:400;margin-left:8px;">{{ history|length }} records</span>
+    <button onclick="clearHistory()"
+            style="float:right;font-size:0.65rem;color:#f87171;background:rgba(248,113,113,0.1);
+              border:1px solid rgba(248,113,113,0.3);border-radius:4px;padding:2px 8px;cursor:pointer;">
+      Clear All
+    </button>
+  </div>
+  <div style="overflow-x:auto;">
+    <table style="width:100%;font-size:0.75rem;border-collapse:collapse;min-width:500px;">
+      <thead>
+        <tr style="color:#334155;border-bottom:1px solid rgba(255,255,255,0.06);">
+          <th style="text-align:left;padding:6px 8px;">#</th>
+          <th style="text-align:left;padding:6px 8px;">Class</th>
+          <th style="text-align:left;padding:6px 8px;">Confidence</th>
+          <th style="text-align:left;padding:6px 8px;">Timestamp</th>
+          <th style="text-align:left;padding:6px 8px;">Snapshot</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if history %}
+          {% for rec in history %}
+          <tr class="tbl-row">
+            <td style="padding:6px 8px;color:#334155;">{{ loop.index }}</td>
+            <td style="padding:6px 8px;font-weight:600;color:{{ class_hex[rec.label] }};">
+              {{ class_labels[rec.label] }}
+            </td>
+            <td style="padding:6px 8px;font-family:'JetBrains Mono',monospace;color:#94a3b8;">
+              {{ rec.confidence }}
+            </td>
+            <td style="padding:6px 8px;color:#475569;">{{ rec.timestamp }}</td>
+            <td style="padding:6px 8px;">
+              {% if rec.snapshot %}
+              <img src="/snapshots/{{ rec.snapshot }}"
+                   style="width:36px;height:36px;object-fit:cover;border-radius:4px;cursor:pointer;"
+                   onclick="openLB('/snapshots/{{ rec.snapshot }}')"/>
+              {% else %}—{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr><td colspan="5" style="padding:20px;text-align:center;color:#334155;">No detections recorded yet.</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+// Doughnut chart
+const ctx = document.getElementById('donut-chart').getContext('2d');
+new Chart(ctx, {
+  type: 'doughnut',
+  data: {
+    labels: ['Pollinating', 'Pollinated', 'Not Pollinated'],
+    datasets:[{
+      data: [{{ counts.pollinating }}, {{ counts.pollinated }}, {{ counts.not_pollinated }}],
+      backgroundColor:['rgba(52,211,153,0.7)','rgba(96,165,250,0.7)','rgba(248,113,113,0.7)'],
+      borderColor:['#34d399','#60a5fa','#f87171'],
+      borderWidth:2, hoverOffset:6
+    }]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:true,
+    plugins:{
+      legend:{labels:{color:'#94a3b8',font:{size:11}}},
+      tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${ctx.raw}`}}
+    },
+    cutout:'65%'
+  }
+});
+
+async function clearHistory(){
+  if(!confirm('Clear all detection history and snapshots from memory?')) return;
+  await fetch('/api/history/clear',{method:'POST'});
+  location.reload();
+}
+</script>
+{% endblock %}

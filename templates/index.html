@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Pollination Monitoring System</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; overflow: hidden; }
+    body { background: #070c14; font-family: 'Inter', sans-serif; color: #e2e8f0; }
+
+    /* Grid scanline effect */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,255,200,0.015) 2px, rgba(0,255,200,0.015) 4px);
+    }
+
+    .panel {
+      background: rgba(10,20,40,0.85);
+      border: 1px solid rgba(0,200,255,0.15);
+      border-radius: 8px;
+      backdrop-filter: blur(4px);
+      position: relative;
+      overflow: hidden;
+    }
+    .panel::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(0,200,255,0.5), transparent);
+    }
+    .panel-title {
+      font-size: 0.65rem; font-weight: 600; letter-spacing: 0.12em;
+      color: rgba(0,200,255,0.6); text-transform: uppercase;
+      padding: 8px 12px 0;
+    }
+
+    /* Status colors */
+    .status-pollinating    { color: #34d399; }
+    .status-pollinated     { color: #60a5fa; }
+    .status-not_pollinated { color: #f87171; }
+    .status-initializing   { color: #94a3b8; }
+
+    .glow-green  { text-shadow: 0 0 12px #34d399, 0 0 24px #34d39960; }
+    .glow-blue   { text-shadow: 0 0 12px #60a5fa, 0 0 24px #60a5fa60; }
+    .glow-red    { text-shadow: 0 0 12px #f87171, 0 0 24px #f8717160; }
+
+    .border-pollinating    { border-color: #34d399 !important; box-shadow: 0 0 16px #34d39930; }
+    .border-pollinated     { border-color: #60a5fa !important; box-shadow: 0 0 16px #60a5fa30; }
+    .border-not_pollinated { border-color: #f87171 !important; box-shadow: 0 0 16px #f8717130; }
+    .border-initializing   { border-color: rgba(0,200,255,0.15) !important; }
+
+    .bar-pollinating    { background: linear-gradient(90deg,#065f46,#34d399); }
+    .bar-pollinated     { background: linear-gradient(90deg,#1e3a8a,#60a5fa); }
+    .bar-not_pollinated { background: linear-gradient(90deg,#7f1d1d,#f87171); }
+
+    /* Pulse dot */
+    .pulse-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    .pulse-green { background:#34d399; box-shadow:0 0 0 0 #34d39966; }
+    .pulse-red   { background:#f87171; box-shadow:0 0 0 0 #f8717166; animation-play-state: paused; }
+    @keyframes pulse {
+      0%   { box-shadow:0 0 0 0 #34d39966; }
+      70%  { box-shadow:0 0 0 8px transparent; }
+      100% { box-shadow:0 0 0 0 transparent; }
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 3px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(0,200,255,0.2); border-radius: 4px; }
+
+    /* Camera feed */
+    #feed { width:100%; height:100%; object-fit:cover; display:block; }
+
+    /* Counter card */
+    .counter-card {
+      background: rgba(0,10,25,0.6);
+      border-radius: 6px; padding: 10px 12px;
+      border: 1px solid rgba(255,255,255,0.06);
+      text-align: center;
+    }
+    .counter-val { font-size: 2rem; font-weight: 700; font-family: 'JetBrains Mono', monospace; line-height:1; }
+
+    /* History row */
+    .hist-row { border-bottom: 1px solid rgba(255,255,255,0.04); transition: background 0.15s; }
+    .hist-row:hover { background: rgba(0,200,255,0.05); }
+
+    /* Gallery */
+    .snap-thumb { cursor:pointer; border-radius:5px; overflow:hidden; aspect-ratio:1;
+                  border:1px solid rgba(255,255,255,0.08); transition: transform 0.15s, border-color 0.15s; }
+    .snap-thumb:hover { transform:scale(1.06); border-color:rgba(0,200,255,0.4); }
+    .snap-thumb img { width:100%; height:100%; object-fit:cover; }
+
+    /* Lightbox */
+    #lightbox { position:fixed; inset:0; background:rgba(0,0,0,0.88); z-index:100;
+                display:none; align-items:center; justify-content:center; }
+    #lightbox.show { display:flex; }
+
+    /* Blink animation for label */
+    @keyframes fadeIn { from {opacity:0; transform:translateY(4px)} to {opacity:1; transform:translateY(0)} }
+    .fade-in { animation: fadeIn 0.3s ease; }
+  </style>
+</head>
+<body class="min-h-screen text-slate-200 p-4">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-5">
+    <div>
+      <h1 class="text-2xl font-bold text-white">🌸 Pollination Classifier</h1>
+      <p class="text-slate-400 text-sm mt-0.5">Live camera · AI classification · Real-time dashboard</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <span id="conn-dot" class="inline-block w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse"></span>
+      <span id="conn-label" class="text-sm text-slate-400">Connecting…</span>
+    </div>
+  </div>
+
+  <!-- Main grid -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+    <!-- Camera feed (spans 2 cols) -->
+    <div class="lg:col-span-2 card p-3 flex flex-col gap-3">
+      <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wider">Live Feed</h2>
+      <div class="relative bg-black rounded-lg overflow-hidden flex items-center justify-center" style="min-height:340px;">
+        <img id="feed" src="/video_feed"
+             class="w-full rounded-lg object-contain"
+             style="max-height:480px;"
+             onerror="this.src='/static/no_camera.png'"/>
+        <div id="feed-overlay"
+             class="absolute bottom-3 left-3 right-3 flex items-center justify-between text-xs text-white/60 pointer-events-none">
+          <span id="ts-badge"></span>
+        </div>
+      </div>
+
+      <!-- Classification result bar -->
+      <div id="result-card" class="rounded-lg p-4 border border-slate-700 bg-slate-800/60">
+        <div class="flex items-center justify-between mb-3">
+          <span id="label-badge"
+                class="badge-initializing px-3 py-1 rounded-full text-sm font-bold tracking-wide">
+            Initializing…
+          </span>
+          <span id="confidence-text" class="text-slate-400 text-sm font-mono">—</span>
+        </div>
+        <!-- Probability bars -->
+        <div class="space-y-2">
+          {% for cname in class_names %}
+          <div>
+            <div class="flex justify-between text-xs text-slate-400 mb-0.5">
+              <span>{{ class_labels[cname] }}</span>
+              <span id="prob-{{ cname }}-txt">0.0%</span>
+            </div>
+            <div class="w-full bg-slate-700 rounded-full h-2">
+              <div id="prob-{{ cname }}-bar"
+                   class="bar-{{ cname }} h-2 rounded-full transition-all duration-300"
+                   style="width:0%"></div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Right column: stats + history -->
+    <div class="flex flex-col gap-4">
+
+      <!-- Stats counters -->
+      <div class="card p-4">
+        <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3">Session Stats</h2>
+        <div class="grid grid-cols-3 gap-2 text-center">
+          <div class="bg-green-900/30 border border-green-800 rounded-lg p-2">
+            <div id="count-pollinating" class="text-2xl font-bold text-green-400">0</div>
+            <div class="text-xs text-green-600 mt-0.5">Pollinating</div>
+          </div>
+          <div class="bg-blue-900/30 border border-blue-800 rounded-lg p-2">
+            <div id="count-pollinated" class="text-2xl font-bold text-blue-400">0</div>
+            <div class="text-xs text-blue-600 mt-0.5">Pollinated</div>
+          </div>
+          <div class="bg-red-900/30 border border-red-800 rounded-lg p-2">
+            <div id="count-not_pollinated" class="text-2xl font-bold text-red-400">0</div>
+            <div class="text-xs text-red-600 mt-0.5">Not Poll.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- History log -->
+      <div class="card p-4 flex flex-col flex-1" style="max-height:320px;">
+        <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3">Detection History</h2>
+        <div class="overflow-y-auto flex-1">
+          <table class="w-full text-xs">
+            <thead>
+              <tr class="text-slate-500 border-b border-slate-700">
+                <th class="text-left pb-2">Class</th>
+                <th class="text-left pb-2">Conf.</th>
+                <th class="text-left pb-2">Time</th>
+              </tr>
+            </thead>
+            <tbody id="history-body">
+              <tr><td colspan="3" class="text-slate-500 py-4 text-center">No detections yet…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Snapshot gallery -->
+  <div class="card p-4 mt-4">
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wider">Auto Snapshots</h2>
+      <span id="snap-count" class="text-xs text-slate-500">0 saved</span>
+    </div>
+    <div id="gallery" class="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-8 gap-2">
+      <p id="no-snaps" class="col-span-full text-slate-500 text-xs text-center py-4">
+        Snapshots appear here automatically once a classification is confirmed…
+      </p>
+    </div>
+  </div>
+
+  <!-- Lightbox -->
+  <div id="lightbox" class="fixed inset-0 bg-black/80 z-50 hidden items-center justify-center p-4"
+       onclick="closeLightbox()">
+    <img id="lb-img" src="" class="max-w-full max-h-full rounded-xl shadow-2xl"/>
+    <p id="lb-caption" class="absolute bottom-6 text-white/70 text-sm text-center"></p>
+  </div>
+
+<script>
+const CLASS_COLORS = {{ class_colors | tojson }};
+const CLASS_LABELS = {{ class_labels | tojson }};
+
+// ── Status polling ────────────────────────────────────────────────────────────
+async function pollStatus() {
+  try {
+    const r = await fetch('/api/status');
+    const d = await r.json();
+
+    // Update label badge
+    const badge = document.getElementById('label-badge');
+    badge.textContent = d.label === 'initializing' ? 'Initializing…'
+                         : (CLASS_LABELS[d.label] || d.label.toUpperCase());
+    badge.className = `badge-${d.label} px-3 py-1 rounded-full text-sm font-bold tracking-wide`;
+
+    // Confidence
+    const confEl = document.getElementById('confidence-text');
+    confEl.textContent = d.label === 'initializing' ? '—'
+                          : `${(d.confidence * 100).toFixed(1)}% confidence`;
+
+    // Probability bars
+    if (d.probs) {
+      for (const [cname, prob] of Object.entries(d.probs)) {
+        const bar = document.getElementById(`prob-${cname}-bar`);
+        const txt = document.getElementById(`prob-${cname}-txt`);
+        if (bar) bar.style.width = `${(prob * 100).toFixed(1)}%`;
+        if (txt) txt.textContent = `${(prob * 100).toFixed(1)}%`;
+      }
+    }
+
+    // Timestamp
+    document.getElementById('ts-badge').textContent = d.timestamp || '';
+
+    // Connection
+    document.getElementById('conn-dot').className = 'inline-block w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse';
+    document.getElementById('conn-label').textContent = 'Live';
+  } catch (e) {
+    document.getElementById('conn-dot').className = 'inline-block w-2.5 h-2.5 rounded-full bg-red-500';
+    document.getElementById('conn-label').textContent = 'Disconnected';
+  }
+}
+
+// ── History polling ───────────────────────────────────────────────────────────
+const counts = { pollinating: 0, pollinated: 0, not_pollinated: 0 };
+
+async function pollHistory() {
+  try {
+    const r = await fetch('/api/history');
+    const items = await r.json();
+    const tbody = document.getElementById('history-body');
+
+    if (items.length === 0) return;
+    tbody.innerHTML = '';
+
+    // Reset counts
+    counts.pollinating = 0; counts.pollinated = 0; counts.not_pollinated = 0;
+    items.forEach(item => { if (counts[item.label] !== undefined) counts[item.label]++; });
+
+    document.getElementById('count-pollinating').textContent    = counts.pollinating;
+    document.getElementById('count-pollinated').textContent     = counts.pollinated;
+    document.getElementById('count-not_pollinated').textContent = counts.not_pollinated;
+
+    items.forEach(item => {
+      const tr = document.createElement('tr');
+      tr.className = 'border-b border-slate-800 hover:bg-slate-800/40';
+      const colorMap = {
+        pollinating: 'text-green-400', pollinated: 'text-blue-400', not_pollinated: 'text-red-400'
+      };
+      const c = colorMap[item.label] || 'text-slate-300';
+      tr.innerHTML = `
+        <td class="py-1.5 ${c} font-semibold">${CLASS_LABELS[item.label] || item.label}</td>
+        <td class="py-1.5 font-mono text-slate-300">${item.confidence}</td>
+        <td class="py-1.5 text-slate-500">${item.timestamp.slice(11)}</td>`;
+      tbody.appendChild(tr);
+    });
+  } catch (e) { /* silent */ }
+}
+
+// ── Snapshot gallery polling ───────────────────────────────────────────────────
+let knownSnaps = new Set();
+
+async function pollSnapshots() {
+  try {
+    const r = await fetch('/api/snapshots');
+    const snaps = await r.json();
+
+    const gallery   = document.getElementById('gallery');
+    const noSnaps   = document.getElementById('no-snaps');
+    const snapCount = document.getElementById('snap-count');
+
+    if (snaps.length > 0) {
+      noSnaps.style.display = 'none';
+      snapCount.textContent = `${snaps.length} saved`;
+
+      // Add only new ones (prepend)
+      snaps.forEach(filename => {
+        if (!knownSnaps.has(filename)) {
+          knownSnaps.add(filename);
+          const div = document.createElement('div');
+          div.className = 'relative group';
+          // determine label from filename
+          let labelClass = 'bg-slate-600';
+          if (filename.startsWith('pollinating_'))    labelClass = 'bg-green-700';
+          else if (filename.startsWith('pollinated_')) labelClass = 'bg-blue-700';
+          else if (filename.startsWith('not_pol'))     labelClass = 'bg-red-700';
+
+          div.innerHTML = `
+            <img src="/snapshots/${filename}" alt="${filename}"
+                 class="snap-img w-full aspect-square object-cover rounded-lg ${labelClass}/20 border border-slate-700"
+                 onclick="openLightbox('/snapshots/${filename}', '${filename}')"/>
+            <div class="absolute inset-0 rounded-lg ${labelClass}/30 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>`;
+          gallery.prepend(div);
+        }
+      });
+    }
+  } catch (e) { /* silent */ }
+}
+
+// ── Lightbox ──────────────────────────────────────────────────────────────────
+function openLightbox(src, caption) {
+  document.getElementById('lb-img').src        = src;
+  document.getElementById('lb-caption').textContent = caption;
+  const lb = document.getElementById('lightbox');
+  lb.classList.remove('hidden');
+  lb.classList.add('flex');
+}
+function closeLightbox() {
+  const lb = document.getElementById('lightbox');
+  lb.classList.add('hidden');
+  lb.classList.remove('flex');
+}
+
+// ── Start polling ─────────────────────────────────────────────────────────────
+pollStatus();
+pollHistory();
+pollSnapshots();
+setInterval(pollStatus,    1000);
+setInterval(pollHistory,   3000);
+setInterval(pollSnapshots, 3000);
+</script>
+</body>
+</html>

@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+{% set active = "control" %}
+{% block title %}Control — Pollination System{% endblock %}
+{% block page_title %}⚙️ System Control{% endblock %}
+
+{% block content %}
+<style>
+  .ctrl-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .ctrl-panel{padding:16px;}
+  .ctrl-label{font-size:0.72rem;color:#64748b;margin-bottom:5px;display:block;}
+  .ctrl-input{
+    width:100%;background:#080e1a;border:1px solid rgba(0,200,255,0.15);
+    border-radius:6px;padding:8px 10px;color:#e2e8f0;font-size:0.82rem;
+    font-family:'JetBrains Mono',monospace;outline:none;transition:border-color 0.2s;
+  }
+  .ctrl-input:focus{border-color:rgba(0,200,255,0.45);}
+  .ctrl-input[type=range]{padding:4px 0;}
+  .ctrl-row{margin-bottom:14px;}
+
+  .btn{
+    padding:8px 16px;border-radius:6px;font-size:0.78rem;font-weight:600;
+    cursor:pointer;border:none;transition:opacity 0.15s;
+  }
+  .btn:hover{opacity:0.85;}
+  .btn-green{background:#065f46;color:#34d399;border:1px solid #34d399;}
+  .btn-red  {background:#7f1d1d;color:#f87171;border:1px solid #f87171;}
+  .btn-blue {background:#1e3a8a;color:#60a5fa;border:1px solid #60a5fa;}
+  .btn-gray {background:#1e293b;color:#94a3b8;border:1px solid #334155;}
+
+  .status-chip{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:4px 10px;border-radius:20px;font-size:0.72rem;font-weight:600;
+  }
+  .chip-on {background:rgba(52,211,153,0.1);color:#34d399;border:1px solid #34d399;}
+  .chip-off{background:rgba(248,113,113,0.1);color:#f87171;border:1px solid #f87171;}
+
+  .toast{
+    position:fixed;bottom:20px;right:20px;
+    background:#0f1c2e;border:1px solid rgba(0,200,255,0.3);
+    border-radius:8px;padding:10px 16px;font-size:0.78rem;
+    color:#7dd3fc;z-index:999;display:none;
+  }
+</style>
+
+<div class="ctrl-grid">
+
+  <!-- ── Camera Control ── -->
+  <div class="panel ctrl-panel">
+    <div class="panel-head" style="padding:0 0 14px;">Camera Control</div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div>
+        <div style="font-size:0.8rem;color:#94a3b8;margin-bottom:4px;">Camera Status</div>
+        <div id="cam-chip" class="status-chip {% if cam_running %}chip-on{% else %}chip-off{% endif %}">
+          <span id="cam-dot" style="width:6px;height:6px;border-radius:50%;background:currentColor;"></span>
+          <span id="cam-label">{% if cam_running %}Running{% else %}Stopped{% endif %}</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-green" onclick="startCam()">▶ Start</button>
+        <button class="btn btn-red"   onclick="stopCam()">■ Stop</button>
+      </div>
+    </div>
+
+    <div class="ctrl-row">
+      <label class="ctrl-label">Camera ID (0 = default, 1/2 = extra cam)</label>
+      <input type="number" id="cfg-camera_id" class="ctrl-input"
+             value="{{ config.camera_id }}" min="0" max="5"/>
+    </div>
+
+    <div class="ctrl-row">
+      <label class="ctrl-label">
+        Inference Every N Frames &nbsp;<span id="lbl-infer" style="color:#60a5fa;">{{ config.infer_every }}</span>
+        <span style="color:#334155;font-size:0.65rem;"> (lower = faster updates, more CPU)</span>
+      </label>
+      <input type="range" id="cfg-infer_every" class="ctrl-input"
+             min="1" max="10" value="{{ config.infer_every }}"
+             oninput="document.getElementById('lbl-infer').textContent=this.value"/>
+    </div>
+
+    <div class="ctrl-row">
+      <label class="ctrl-label">
+        JPEG Quality &nbsp;<span id="lbl-jpeg" style="color:#60a5fa;">{{ config.jpeg_quality }}</span>%
+      </label>
+      <input type="range" id="cfg-jpeg_quality" class="ctrl-input"
+             min="30" max="95" value="{{ config.jpeg_quality }}"
+             oninput="document.getElementById('lbl-jpeg').textContent=this.value"/>
+    </div>
+
+    <button class="btn btn-blue" onclick="saveConfig()" style="width:100%;margin-top:6px;">
+      💾 Apply Camera Settings
+    </button>
+  </div>
+
+  <!-- ── Detection Control ── -->
+  <div class="panel ctrl-panel">
+    <div class="panel-head" style="padding:0 0 14px;">Detection Settings</div>
+
+    <div class="ctrl-row">
+      <label class="ctrl-label">
+        Confidence Threshold &nbsp;
+        <span id="lbl-conf" style="color:#60a5fa;">{{ (config.confidence_threshold * 100)|int }}%</span>
+        <span style="color:#334155;font-size:0.65rem;"> (labels below this are ignored)</span>
+      </label>
+      <input type="range" id="cfg-confidence_threshold" class="ctrl-input"
+             min="10" max="90" step="5"
+             value="{{ (config.confidence_threshold * 100)|int }}"
+             oninput="document.getElementById('lbl-conf').textContent=this.value+'%'"/>
+    </div>
+
+    <div class="ctrl-row">
+      <label class="ctrl-label">
+        Stable Frames Before Snapshot &nbsp;
+        <span id="lbl-stable" style="color:#60a5fa;">{{ config.stable_frames }}</span>
+        <span style="color:#334155;font-size:0.65rem;"> (consecutive same-class frames needed)</span>
+      </label>
+      <input type="range" id="cfg-stable_frames" class="ctrl-input"
+             min="2" max="20" value="{{ config.stable_frames }}"
+             oninput="document.getElementById('lbl-stable').textContent=this.value"/>
+    </div>
+
+    <div class="ctrl-row">
+      <label class="ctrl-label">Max History Records</label>
+      <input type="number" id="cfg-max_history" class="ctrl-input"
+             value="{{ config.max_history }}" min="10" max="1000"/>
+    </div>
+
+    <button class="btn btn-blue" onclick="saveConfig()" style="width:100%;margin-top:6px;">
+      💾 Apply Detection Settings
+    </button>
+  </div>
+
+  <!-- ── Model Info ── -->
+  <div class="panel ctrl-panel">
+    <div class="panel-head" style="padding:0 0 14px;">Model Information</div>
+    <table style="width:100%;font-size:0.75rem;border-collapse:collapse;">
+      <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+        <td style="padding:7px 0;color:#475569;">Architecture</td>
+        <td style="color:#94a3b8;font-family:'JetBrains Mono',monospace;">EfficientNet-B3</td>
+      </tr>
+      <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+        <td style="padding:7px 0;color:#475569;">Classes</td>
+        <td style="color:#94a3b8;">Pollinating · Pollinated · Not Pollinated</td>
+      </tr>
+      <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+        <td style="padding:7px 0;color:#475569;">Val Accuracy</td>
+        <td style="color:#34d399;font-family:'JetBrains Mono',monospace;">82.6%</td>
+      </tr>
+      <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+        <td style="padding:7px 0;color:#475569;">Test Accuracy (TTA)</td>
+        <td style="color:#34d399;font-family:'JetBrains Mono',monospace;">83.3%</td>
+      </tr>
+      <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+        <td style="padding:7px 0;color:#475569;">Image Size</td>
+        <td style="color:#94a3b8;font-family:'JetBrains Mono',monospace;">160 × 160 px</td>
+      </tr>
+      <tr>
+        <td style="padding:7px 0;color:#475569;">Model File</td>
+        <td style="color:#64748b;font-size:0.68rem;word-break:break-all;">{{ config.model_path }}</td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- ── Data Management ── -->
+  <div class="panel ctrl-panel">
+    <div class="panel-head" style="padding:0 0 14px;">Data Management</div>
+
+    <div style="margin-bottom:12px;">
+      <div style="font-size:0.78rem;color:#94a3b8;margin-bottom:6px;">Session Memory</div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-gray" onclick="location.href='/report'">
+          📋 View Report
+        </button>
+        <button class="btn btn-red" onclick="clearAll()">
+          🗑 Clear History
+        </button>
+      </div>
+    </div>
+
+    <div style="margin-bottom:12px;">
+      <div style="font-size:0.78rem;color:#94a3b8;margin-bottom:6px;">Snapshot Folder</div>
+      <div style="background:#080e1a;border:1px solid rgba(0,200,255,0.1);border-radius:6px;padding:8px 10px;font-size:0.68rem;color:#475569;font-family:'JetBrains Mono',monospace;word-break:break-all;">
+        {{ config.snapshot_dir }}
+      </div>
+    </div>
+
+    <div>
+      <div style="font-size:0.78rem;color:#94a3b8;margin-bottom:6px;">Quick Links</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <a href="/" class="btn btn-gray">📊 Dashboard</a>
+        <a href="/report" class="btn btn-gray">📋 Report</a>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Toast notification ── -->
+<div class="toast" id="toast"></div>
+
+<script>
+function showToast(msg, color='#7dd3fc'){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.style.color=color; t.style.display='block';
+  setTimeout(()=>t.style.display='none', 2500);
+}
+
+async function startCam(){
+  const r=await fetch('/api/camera/start',{method:'POST'});
+  const d=await r.json();
+  updateChip(d.cam_running);
+  showToast('Camera started ▶', '#34d399');
+}
+async function stopCam(){
+  const r=await fetch('/api/camera/stop',{method:'POST'});
+  updateChip(false);
+  showToast('Camera stopped ■', '#f87171');
+}
+function updateChip(on){
+  const chip=document.getElementById('cam-chip');
+  const lbl=document.getElementById('cam-label');
+  chip.className='status-chip '+(on?'chip-on':'chip-off');
+  lbl.textContent=on?'Running':'Stopped';
+}
+
+async function saveConfig(){
+  const cfg={
+    camera_id:    parseInt(document.getElementById('cfg-camera_id').value),
+    infer_every:  parseInt(document.getElementById('cfg-infer_every').value),
+    jpeg_quality: parseInt(document.getElementById('cfg-jpeg_quality').value),
+    stable_frames:parseInt(document.getElementById('cfg-stable_frames').value),
+    max_history:  parseInt(document.getElementById('cfg-max_history').value),
+    confidence_threshold: parseInt(document.getElementById('cfg-confidence_threshold').value)/100,
+  };
+  const r=await fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(cfg)});
+  const d=await r.json();
+  if(d.status==='ok') showToast('Settings saved ✓', '#34d399');
+}
+
+async function clearAll(){
+  if(!confirm('Clear all detection history from memory?')) return;
+  await fetch('/api/history/clear',{method:'POST'});
+  showToast('History cleared', '#f87171');
+}
+</script>
+{% endblock %}
