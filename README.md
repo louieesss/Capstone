@@ -56,17 +56,26 @@ CAPS/
 - 8GB+ RAM
 - 5GB free disk space
 
-### Step 1: Install Required Libraries
+### Step 1: Clone the Repository
+
+```bash
+git clone https://github.com/louieesss/Capstone.git
+cd Capstone
+```
+
+> ⚠️ The repository includes the full `DATASETS_ORGANIZED/` folder (~4,400 images). The clone may take a few minutes depending on your internet speed.
+
+### Step 2: Install Required Libraries
 
 **For GPU (recommended):**
 ```bash
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
-pip install pillow matplotlib numpy scikit-learn seaborn
+pip install pillow matplotlib numpy scikit-learn seaborn flask opencv-python
 ```
 
 **For CPU only:**
 ```bash
-pip install torch torchvision pillow matplotlib numpy scikit-learn seaborn
+pip install torch torchvision pillow matplotlib numpy scikit-learn seaborn flask opencv-python
 ```
 
 Or use requirements.txt:
@@ -74,24 +83,7 @@ Or use requirements.txt:
 pip install -r requirements.txt
 ```
 
-### Step 2: Organize Your Images
-
-The folder structure has already been created for you. Now you need to organize your images:
-
-1. Run the helper script to check your progress:
-   ```bash
-   python organize_images.py
-   ```
-
-2. Manually move images from `DATASETS/` to the appropriate folders in `DATASETS_ORGANIZED/`:
-   - **pollinating**: Bees actively pollinating flowers
-   - **pollinated**: Flowers that have been pollinated
-   - **not_pollinated**: Flowers that haven't been pollinated
-
-3. Distribute images across train/val/test splits:
-   - **Train (70%)**: Used to train the model
-   - **Validation (15%)**: Used to tune hyperparameters during training
-   - **Test (15%)**: Used for final evaluation
+> ✅ The dataset is already organized into `DATASETS_ORGANIZED/train`, `val`, and `test` splits — no manual sorting needed.
 
 ### Step 3: Train the Model
 
@@ -103,7 +95,25 @@ The folder structure has already been created for you. Now you need to organize 
    - Evaluate performance with metrics and confusion matrix
    - Save the trained model as `pollination_model.pth`
 
-### Step 4: Use the Trained Model
+### Step 4: Run the Live Dashboard
+
+Once the model is trained, launch the real-time monitoring web app:
+
+```bash
+python app.py
+```
+
+Then open your browser at **http://localhost:5000**
+
+The dashboard provides:
+- 📷 Live camera feed with AI classification overlay
+- 📊 Real-time probability bars for all 3 classes
+- 🗂️ Detection history log with confidence scores
+- 🖼️ Auto snapshot gallery of classified frames
+
+> A webcam/USB camera must be connected. The pre-trained model (`best_model_checkpoint.pth`) is already included in the repo — you can run the dashboard without retraining.
+
+### Step 5: Use the Trained Model
 
 After training, you can use the model to classify new images:
 
