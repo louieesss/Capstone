@@ -28,3 +28,10 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Large datasets (too large for GitHub)
+DATASETS/
+DATASETS_ORGANIZED/
+
+# Cloned subfolders
+Capstone/
