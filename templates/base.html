@@ -3,6 +3,13 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="theme-color" content="#060c18"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-title" content="Pollination"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <link rel="manifest" href="/manifest.webmanifest"/>
+  <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/pwa-icon-192.png"/>
+  <link rel="apple-touch-icon" href="/static/icons/pwa-icon-192.png"/>
   <title>{% block title %}Pollination System{% endblock %}</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -80,6 +87,22 @@
       display:none;align-items:center;justify-content:center;}
     #lightbox.show{display:flex;}
     #lightbox img{max-width:90vw;max-height:85vh;border-radius:10px;}
+
+    @media (max-width: 980px){
+      body{height:auto;min-height:100vh;display:block;overflow:auto;}
+      #sidebar{
+        width:100%;min-width:0;border-right:none;border-bottom:1px solid rgba(0,200,255,0.1);
+        display:block;
+      }
+      .nav-logo{padding:12px 14px 10px;}
+      .nav-section{display:none;}
+      .nav-item{display:inline-flex;margin:8px 4px;padding:8px 10px;font-size:0.78rem;}
+      #sidebar .nav-footer{padding:10px 14px;}
+      #main{min-height:calc(100vh - 150px);}
+      #topbar{padding:0 12px;}
+      #topbar .meta{display:none;}
+      #content{padding:10px;}
+    }
   </style>
 </head>
 <body>
@@ -101,6 +124,9 @@
   </a>
   <a href="/control" class="nav-item {% if active=='control' %}active{% endif %}">
     <span class="icon">⚙️</span> Control
+  </a>
+  <a href="/mobile" class="nav-item {% if active=='mobile' %}active{% endif %}">
+    <span class="icon">📱</span> Mobile Cam
   </a>
 
   <div class="nav-section" style="margin-top:8px;">Classes</div>
@@ -157,9 +183,11 @@ async function pingStatus(){
     const d=await r.json();
     const dot=document.getElementById('status-dot');
     const txt=document.getElementById('status-text');
-    if(d.cam_running){
+    const sourceLive = d.camera_source === 'mobile' ? d.mobile_cam_active : d.cam_running;
+    if(sourceLive){
       dot.className=''; dot.style.cssText='width:8px;height:8px;border-radius:50%;background:#34d399;box-shadow:0 0 0 0 #34d39966;animation:pulse 1.5s infinite;';
-      txt.textContent='Camera Live';txt.style.color='#34d399';
+      txt.textContent = d.camera_source === 'mobile' ? 'Mobile Live' : 'Camera Live';
+      txt.style.color='#34d399';
     } else {
       dot.className='offline'; dot.style.cssText='width:8px;height:8px;border-radius:50%;background:#f87171;';
       txt.textContent='Camera Off';txt.style.color='#f87171';
@@ -176,6 +204,13 @@ function openLB(src){
   document.getElementById('lightbox').classList.add('show');
 }
 function closeLB(){document.getElementById('lightbox').classList.remove('show');}
+</script>
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('/sw.js').catch(()=>{});
+  });
+}
 </script>
 {% block scripts %}{% endblock %}
 </body>

@@ -63,6 +63,24 @@
     </div>
 
     <div class="ctrl-row">
+      <label class="ctrl-label">Camera Source</label>
+      <div style="display:flex;gap:12px;">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;color:#e2e8f0;font-size:0.82rem;">
+          <input type="radio" id="src-camera_module" name="camera_source" value="camera_module" 
+                 {% if config.camera_source == 'camera_module' %}checked{% endif %} 
+                 onchange="switchCameraSource(this.value)"/>
+          <span>📷 Camera Module</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;color:#e2e8f0;font-size:0.82rem;">
+          <input type="radio" id="src-mobile" name="camera_source" value="mobile"
+                 {% if config.camera_source == 'mobile' %}checked{% endif %} 
+                 onchange="switchCameraSource(this.value)"/>
+          <span>📱 Mobile Camera</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="ctrl-row" id="camera-id-row">
       <label class="ctrl-label">Camera ID (0 = default, 1/2 = extra cam)</label>
       <input type="number" id="cfg-camera_id" class="ctrl-input"
              value="{{ config.camera_id }}" min="0" max="5"/>
@@ -189,6 +207,7 @@
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <a href="/" class="btn btn-gray">📊 Dashboard</a>
         <a href="/report" class="btn btn-gray">📋 Report</a>
+        <a href="/mobile" class="btn btn-gray">📱 Mobile</a>
       </div>
     </div>
   </div>
@@ -223,6 +242,23 @@ function updateChip(on){
   lbl.textContent=on?'Running':'Stopped';
 }
 
+async function switchCameraSource(source){
+  const r=await fetch('/api/camera/set_source',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({source:source})
+  });
+  const d=await r.json();
+  if(d.status==='ok'){
+    showToast(`Switched to ${source==='camera_module'?'Camera Module':'Mobile Camera'}`, '#34d399');
+    updateChip(d.cam_running || d.mobile_cam_active);
+    // Hide camera ID input for mobile source
+    const idRow=document.getElementById('camera-id-row');
+    if(source==='mobile') idRow.style.display='none';
+    else idRow.style.display='block';
+  }
+}
+
 async function saveConfig(){
   const cfg={
     camera_id:    parseInt(document.getElementById('cfg-camera_id').value),
@@ -242,5 +278,11 @@ async function clearAll(){
   await fetch('/api/history/clear',{method:'POST'});
   showToast('History cleared', '#f87171');
 }
+
+window.addEventListener('DOMContentLoaded', ()=>{
+  const selected=document.querySelector('input[name="camera_source"]:checked')?.value;
+  const idRow=document.getElementById('camera-id-row');
+  if(idRow) idRow.style.display = selected==='mobile' ? 'none' : 'block';
+});
 </script>
 {% endblock %}

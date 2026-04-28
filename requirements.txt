@@ -16,3 +16,12 @@ scikit-learn>=1.0.0
 # Jupyter notebook (optional, if running locally)
 jupyter>=1.0.0
 ipykernel>=6.0.0
+
+# Sensors (Raspberry Pi)
+adafruit-blinka
+adafruit-circuitpython-dht
+smbus2
+
+# MySQL database
+mysql-connector-python>=9.0.0
+python-dotenv>=1.0.0

@@ -38,6 +38,15 @@
   .s-ok   {background:rgba(52,211,153,0.15);color:#34d399;}
   .s-warn {background:rgba(251,191,36,0.15);color:#fbbf24;}
   .s-bad  {background:rgba(248,113,113,0.15);color:#f87171;}
+
+  @media (max-width: 1100px){
+    .dash-grid{grid-template-columns:1fr;grid-template-rows:auto;height:auto;}
+    .cam-panel{grid-row:auto;}
+  }
+
+  @media (max-width: 680px){
+    .ctr-val{font-size:1.45rem;}
+  }
 </style>
 
 <div class="dash-grid">
@@ -51,7 +60,6 @@
              style="width:100%;height:100%;object-fit:contain;display:block;"
              onerror="this.style.display='none'"/>
         <div id="no-feed" style="display:none;position:absolute;inset:0;display:flex;align-items:center;justify-content:center;">
-          <p style="color:#334155;font-size:0.8rem;">Camera not running</p>
         </div>
       </div>
     </div>
@@ -101,7 +109,7 @@
         </div>
         <div class="ctr">
           <div class="ctr-val c-red" id="cnt-not_pollinated">0</div>
-          <div style="font-size:0.6rem;color:#f87171;margin-top:4px;">Not Poll.</div>
+          <div style="font-size:0.6rem;color:#f87171;margin-top:4px;">Not Pollinated</div>
         </div>
       </div>
       <div style="margin-top:10px;display:flex;justify-content:space-between;font-size:0.68rem;color:#334155;">
@@ -191,9 +199,11 @@
 
 </div>
 
+<script id="dash-class-labels-json" type="application/json">{{ class_labels | tojson }}</script>
+<script id="dash-class-hex-json" type="application/json">{{ class_hex | tojson }}</script>
 <script>
-const CLASS_LABELS = {{ class_labels | tojson }};
-const CLASS_HEX    = {{ class_hex    | tojson }};
+const CLASS_LABELS = JSON.parse(document.getElementById('dash-class-labels-json').textContent || '{}');
+const CLASS_HEX    = JSON.parse(document.getElementById('dash-class-hex-json').textContent || '{}');
 let knownSnaps = new Set();
 let counts = {pollinating:0, pollinated:0, not_pollinated:0};
 

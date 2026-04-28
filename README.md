@@ -105,6 +105,45 @@ python app.py
 
 Then open your browser at **http://localhost:5000**
 
+### Mobile Camera Stability + Off-LAN Access
+
+For reliable mobile camera streaming:
+
+- Keep app running on the Pi: `python app.py`
+- Open `/mobile` on your phone in a normal browser (Chrome/Safari), not in-app browser.
+- Use HTTPS for live camera (required by mobile browsers for `getUserMedia`).
+
+#### Access from a different network (not same LAN)
+
+Yes — this is possible using an HTTPS tunnel or domain.
+
+**Option A (recommended): Cloudflare Tunnel**
+
+```bash
+cloudflared tunnel --url http://localhost:5000
+```
+
+Use the generated `https://...trycloudflare.com/mobile` URL on your phone anywhere.
+
+**Option B: ngrok**
+
+```bash
+ngrok http 5000
+```
+
+Use the generated `https://...ngrok-free.app/mobile` URL.
+
+To show your public URL inside the app UI, set:
+
+```bash
+export PUBLIC_BASE_URL="https://your-public-host"
+python app.py
+```
+
+Notes:
+- Remote mobile live camera requires HTTPS (HTTP is blocked on most phones).
+- Keep only one active source at a time (`camera_module` or `mobile`) for stable performance.
+
 The dashboard provides:
 - 📷 Live camera feed with AI classification overlay
 - 📊 Real-time probability bars for all 3 classes

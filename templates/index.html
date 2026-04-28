@@ -127,15 +127,36 @@
     <!-- Camera feed (spans 2 cols) -->
     <div class="lg:col-span-2 card p-3 flex flex-col gap-3">
       <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wider">Live Feed</h2>
-      <div class="relative bg-black rounded-lg overflow-hidden flex items-center justify-center" style="min-height:340px;">
+      <div id="feed-container" class="relative bg-black rounded-lg overflow-hidden flex items-center justify-center" style="min-height:340px;">
+        <!-- Server/Camera Module Feed -->
         <img id="feed" src="/video_feed"
              class="w-full rounded-lg object-contain"
              style="max-height:480px;"
              onerror="this.src='/static/no_camera.png'"/>
+        
+        <!-- Mobile Camera Feed (hidden by default) -->
+        <video id="mobile-video" style="display:none;width:100%;height:100%;object-fit:contain;border-radius:8px;" autoplay playsinline muted></video>
+        <canvas id="capture-canvas" style="display:none;"></canvas>
+        
         <div id="feed-overlay"
              class="absolute bottom-3 left-3 right-3 flex items-center justify-between text-xs text-white/60 pointer-events-none">
           <span id="ts-badge"></span>
+          <span id="camera-indicator" style="font-size:0.65rem;color:#60a5fa;">📷 Camera Module</span>
         </div>
+      </div>
+
+      <!-- Camera Source Selector -->
+      <div style="display:flex;gap:8px;padding:8px 12px;background:rgba(0,20,40,0.5);border-radius:6px;border:1px solid rgba(0,200,255,0.1);">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;color:#e2e8f0;font-size:0.78rem;flex:1;">
+          <input type="radio" id="feed-src-module" name="feed_source" value="camera_module" checked onchange="switchFeedSource(this.value)"/>
+          <span>📷 Module</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;color:#e2e8f0;font-size:0.78rem;flex:1;">
+          <input type="radio" id="feed-src-mobile" name="feed_source" value="mobile" onchange="switchFeedSource(this.value)"/>
+          <span>📱 Mobile</span>
+        </label>
+        <button id="mobile-start-btn" class="btn btn-green" style="display:none;padding:4px 8px;font-size:0.7rem;" onclick="startMobileCamera()">▶ Start</button>
+        <button id="mobile-stop-btn" class="btn btn-red" style="display:none;padding:4px 8px;font-size:0.7rem;" onclick="stopMobileCamera()">■ Stop</button>
       </div>
 
       <!-- Classification result bar -->
@@ -360,6 +381,106 @@ function closeLightbox() {
   const lb = document.getElementById('lightbox');
   lb.classList.add('hidden');
   lb.classList.remove('flex');
+}
+
+// ── Mobile Camera Control ─────────────────────────────────────────────────────
+let mobileStream = null;
+let mobileCapturingInterval = null;
+
+async function startMobileCamera() {
+  try {
+    const video = document.getElementById('mobile-video');
+    mobileStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } },
+      audio: false
+    });
+    video.srcObject = mobileStream;
+    video.style.display = 'block';
+    
+    document.getElementById('feed').style.display = 'none';
+    document.getElementById('mobile-start-btn').style.display = 'none';
+    document.getElementById('mobile-stop-btn').style.display = 'block';
+    
+    // Start sending frames to server every 100ms
+    const canvas = document.getElementById('capture-canvas');
+    const ctx = canvas.getContext('2d');
+    
+    mobileCapturingInterval = setInterval(() => {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      ctx.drawImage(video, 0, 0);
+      
+      canvas.toBlob(blob => {
+        const formData = new FormData();
+        formData.append('image', blob, 'frame.jpg');
+        fetch('/api/camera/mobile_frame', {
+          method: 'POST',
+          body: formData
+        }).catch(e => console.log('Frame send error:', e));
+      }, 'image/jpeg', 0.85);
+    }, 100);
+    
+    console.log('Mobile camera started');
+  } catch (err) {
+    console.error('Error accessing camera:', err);
+    alert('Cannot access mobile camera: ' + err.message);
+  }
+}
+
+async function stopMobileCamera() {
+  if (mobileStream) {
+    mobileStream.getTracks().forEach(track => track.stop());
+    mobileStream = null;
+  }
+  if (mobileCapturingInterval) {
+    clearInterval(mobileCapturingInterval);
+    mobileCapturingInterval = null;
+  }
+  
+  document.getElementById('mobile-video').style.display = 'none';
+  document.getElementById('feed').style.display = 'block';
+  document.getElementById('mobile-start-btn').style.display = 'block';
+  document.getElementById('mobile-stop-btn').style.display = 'none';
+  
+  console.log('Mobile camera stopped');
+}
+
+async function switchFeedSource(source) {
+  const feed = document.getElementById('feed');
+  const video = document.getElementById('mobile-video');
+  const startBtn = document.getElementById('mobile-start-btn');
+  const stopBtn = document.getElementById('mobile-stop-btn');
+  const indicator = document.getElementById('camera-indicator');
+  
+  if (source === 'camera_module') {
+    // Switch to camera module
+    await stopMobileCamera();
+    feed.style.display = 'block';
+    video.style.display = 'none';
+    startBtn.style.display = 'none';
+    stopBtn.style.display = 'none';
+    indicator.textContent = '📷 Camera Module';
+    
+    // Update backend
+    await fetch('/api/camera/set_source', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ source: 'camera_module' })
+    });
+  } else if (source === 'mobile') {
+    // Switch to mobile camera
+    feed.style.display = 'none';
+    startBtn.style.display = 'block';
+    stopBtn.style.display = 'none';
+    indicator.textContent = '📱 Mobile Camera';
+    
+    // Update backend
+    await fetch('/api/camera/set_source', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ source: 'mobile' })
+    }).then(r => r.json()).catch(e => console.log('Switch error:', e));
+  }
 }
 
 // ── Start polling ─────────────────────────────────────────────────────────────

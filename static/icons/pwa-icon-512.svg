@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Pollination">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0b1020"/>
+      <stop offset="100%" stop-color="#10273a"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="84" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="128" fill="#34d399" opacity="0.12"/>
+  <path d="M256 140c64 0 120 50 120 112s-56 112-120 112-120-50-120-112 56-112 120-112z" fill="#34d399"/>
+  <circle cx="256" cy="232" r="34" fill="#0b1020"/>
+  <path d="M256 272c52 0 90 28 104 76-32 30-70 46-104 46s-72-16-104-46c14-48 52-76 104-76z" fill="#0b1020"/>
+</svg>
