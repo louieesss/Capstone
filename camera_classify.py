@@ -125,7 +125,7 @@ def draw_overlay(frame, label, confidence, all_probs, class_names,
                     (bar_x + 4, y + 16),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.52, (255, 255, 255), 1, cv2.LINE_AA)
 
-    # ── FPS ──
+    # ── FPS ── source .venv/bin/activate && python app.py
     if fps is not None and DISPLAY_FPS:
         cv2.putText(frame, f"FPS: {fps:.1f}", (w - 110, h - 10),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.55, (160, 160, 160), 1, cv2.LINE_AA)

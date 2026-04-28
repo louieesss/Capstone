@@ -19,11 +19,12 @@ from torchvision import models, transforms
 from PIL import Image
 from flask import (Flask, Response, render_template, jsonify,
                    send_from_directory, request)
+from picamera2 import Picamera2
 
 # ─── CONFIG (editable via /control) ─────────────────────────────────────────
 CONFIG = {
-    'model_path':           r'C:\Users\Admin\Desktop\CAPS\best_model_checkpoint.pth',
-    'snapshot_dir':         r'C:\Users\Admin\Desktop\CAPS\snapshots',
+    'model_path':           os.path.join(os.path.dirname(os.path.abspath(__file__)), 'best_model_checkpoint.pth'),
+    'snapshot_dir':         os.path.join(os.path.dirname(os.path.abspath(__file__)), 'snapshots'),
     'camera_id':            0,
     'infer_every':          3,
     'stable_frames':        5,
@@ -135,48 +136,60 @@ def save_snapshot(frame, label, conf):
 # ─── CAMERA THREAD ───────────────────────────────────────────────────────────
 def camera_loop():
     global current_frame, state, history, stable_count, last_stable, cam_running
-    cap = cv2.VideoCapture(CONFIG['camera_id'])
-    if not cap.isOpened():
-        print(f'ERROR: Cannot open camera {CONFIG["camera_id"]}'); cam_running=False; return
+    try:
+        picam2 = Picamera2(CONFIG['camera_id'])
+        cfg = picam2.create_preview_configuration(
+            main={'format': 'RGB888', 'size': (640, 480)})
+        picam2.configure(cfg)
+        picam2.start()
+        time.sleep(0.5)  # let camera warm up
+    except Exception as e:
+        print(f'ERROR: Cannot open Pi camera {CONFIG["camera_id"]}: {e}')
+        cam_running = False
+        return
     cam_running = True
     idx=0; label=CLASS_NAMES[0]; conf=0.0; probs={c:0.0 for c in CLASS_NAMES}
-    while cam_running:
-        ret, frame = cap.read()
-        if not ret: time.sleep(0.05); continue
-        idx += 1
-        if idx % CONFIG['infer_every'] == 0:
-            l,c,p = predict(frame)
-            if c >= CONFIG['confidence_threshold']:
-                label,conf,probs = l,c,p
-            ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            with lock:
-                state = {'label':label,'confidence':conf,'probs':probs,'timestamp':ts}
-            if label == last_stable: stable_count += 1
-            else: stable_count=1; last_stable=label
-            if stable_count == CONFIG['stable_frames']:
-                fn = save_snapshot(frame.copy(), label, conf)
-                rec = {'label':label,'confidence':f'{conf*100:.1f}%',
-                       'confidence_raw':round(conf*100,1),'timestamp':ts,'snapshot':fn}
+    try:
+        while cam_running:
+            rgb = picam2.capture_array()          # H×W×3 RGB numpy array
+            frame = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)  # convert to BGR for cv2
+            idx += 1
+            if idx % CONFIG['infer_every'] == 0:
+                l,c,p = predict(frame)
+                if c >= CONFIG['confidence_threshold']:
+                    label,conf,probs = l,c,p
+                ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                 with lock:
-                    history.insert(0, rec)
-                    if len(history) > CONFIG['max_history']: history.pop()
-        h,w = frame.shape[:2]; color=CLASS_BGR.get(label,(180,180,180))
-        disp = frame.copy()
-        cv2.rectangle(disp,(0,0),(w,55),(10,15,25),-1)
-        cv2.rectangle(disp,(0,0),(w,55),color,2)
-        cv2.putText(disp,f'{CLASS_LABELS.get(label,label)}  {conf*100:.1f}%',
-                    (12,38),cv2.FONT_HERSHEY_DUPLEX,0.95,color,2,cv2.LINE_AA)
-        bx=8; by=h-10-len(CLASS_NAMES)*27; BW=195
-        for i,cn in enumerate(CLASS_NAMES):
-            pb=probs.get(cn,0.0); y=by+i*27; c2=CLASS_BGR.get(cn,(150,150,150))
-            cv2.rectangle(disp,(bx,y),(bx+BW,y+18),(25,25,25),-1)
-            cv2.rectangle(disp,(bx,y),(bx+int(BW*pb),y+18),c2,-1)
-            cv2.putText(disp,f'{CLASS_LABELS[cn][:12]}: {pb*100:.0f}%',
-                        (bx+4,y+13),cv2.FONT_HERSHEY_SIMPLEX,0.43,(210,210,210),1,cv2.LINE_AA)
-        cv2.putText(disp,datetime.now().strftime('%H:%M:%S'),(w-75,h-5),
-                    cv2.FONT_HERSHEY_SIMPLEX,0.45,(90,90,90),1)
-        with lock: current_frame = disp
-    cap.release(); cam_running=False
+                    state = {'label':label,'confidence':conf,'probs':probs,'timestamp':ts}
+                if label == last_stable: stable_count += 1
+                else: stable_count=1; last_stable=label
+                if stable_count == CONFIG['stable_frames']:
+                    fn = save_snapshot(frame.copy(), label, conf)
+                    rec = {'label':label,'confidence':f'{conf*100:.1f}%',
+                           'confidence_raw':round(conf*100,1),'timestamp':ts,'snapshot':fn}
+                    with lock:
+                        history.insert(0, rec)
+                        if len(history) > CONFIG['max_history']: history.pop()
+            h,w = frame.shape[:2]; color=CLASS_BGR.get(label,(180,180,180))
+            disp = frame.copy()
+            cv2.rectangle(disp,(0,0),(w,55),(10,15,25),-1)
+            cv2.rectangle(disp,(0,0),(w,55),color,2)
+            cv2.putText(disp,f'{CLASS_LABELS.get(label,label)}  {conf*100:.1f}%',
+                        (12,38),cv2.FONT_HERSHEY_DUPLEX,0.95,color,2,cv2.LINE_AA)
+            bx=8; by=h-10-len(CLASS_NAMES)*27; BW=195
+            for i,cn in enumerate(CLASS_NAMES):
+                pb=probs.get(cn,0.0); y=by+i*27; c2=CLASS_BGR.get(cn,(150,150,150))
+                cv2.rectangle(disp,(bx,y),(bx+BW,y+18),(25,25,25),-1)
+                cv2.rectangle(disp,(bx,y),(bx+int(BW*pb),y+18),c2,-1)
+                cv2.putText(disp,f'{CLASS_LABELS[cn][:12]}: {pb*100:.0f}%',
+                            (bx+4,y+13),cv2.FONT_HERSHEY_SIMPLEX,0.43,(210,210,210),1,cv2.LINE_AA)
+            cv2.putText(disp,datetime.now().strftime('%H:%M:%S'),(w-75,h-5),
+                        cv2.FONT_HERSHEY_SIMPLEX,0.45,(90,90,90),1)
+            with lock: current_frame = disp
+    finally:
+        picam2.stop()
+        picam2.close()
+        cam_running = False
 
 def gen_frames():
     while True:
@@ -281,5 +294,6 @@ if __name__ == '__main__':
     print('  Report    : http://localhost:5000/report')
     print('  Control   : http://localhost:5000/control')
     print('='*55)
-    # Camera is NOT auto-started — start it from the Control page or /api/camera/start
+    # Auto-start camera on launch
+    threading.Thread(target=camera_loop, daemon=True).start()
     app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)
