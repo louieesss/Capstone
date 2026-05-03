@@ -34,8 +34,10 @@
       <button id="btn-start" class="mobile-btn btn-start" onclick="startMobileCamera()">▶ Start Live</button>
       <button id="btn-stop" class="mobile-btn btn-stop" onclick="stopMobileCamera()" style="display:none;">■ Stop</button>
       <button id="btn-capture" class="mobile-btn btn-capture" onclick="triggerMobileCapture()">📸 Capture Photo</button>
-      <span id="mobile-msg" class="mobile-status">Tap Start Live or Capture Photo.</span>
+      <button id="btn-upload" class="mobile-btn btn-capture" onclick="triggerMobileUpload()">⬆ Upload Photo</button>
+      <span id="mobile-msg" class="mobile-status">Tap Start Live, Capture Photo, or Upload Photo.</span>
       <input id="mobile-file" type="file" accept="image/*" capture="environment" style="display:none" onchange="sendCapturedFile(this.files?.[0])" />
+      <input id="mobile-upload" type="file" accept="image/*" style="display:none" onchange="sendCapturedFile(this.files?.[0])" />
     </div>
     <div style="margin-top:8px;font-size:0.68rem;color:#64748b;">
       <span id="mobile-debug"></span>
@@ -63,6 +65,10 @@
       <div class="result-box" style="grid-column:1/-1;">
         <div class="result-label">Updated</div>
         <div class="result-value" id="res-time" style="font-size:0.95rem;">—</div>
+      </div>
+      <div class="result-box" style="grid-column:1/-1;">
+        <div class="result-label">Coconut Buttons</div>
+        <div class="result-value" id="res-buttons" style="font-size:0.95rem;">—</div>
       </div>
     </div>
     <p class="helper" style="margin-top:10px;">
@@ -105,6 +111,21 @@ function setMobileMessage(message, color='#64748b'){
   const el = document.getElementById('mobile-msg');
   el.textContent = message;
   el.style.color = color;
+}
+
+function updateButtonStatus(count){
+  const el = document.getElementById('res-buttons');
+  const n = Number(count);
+  if(!Number.isFinite(n)){
+    el.textContent = '—';
+    el.style.color = '#94a3b8';
+  } else if(n > 0){
+    el.textContent = `Detected: ${n}`;
+    el.style.color = '#34d399';
+  } else {
+    el.textContent = 'No coconut buttons found';
+    el.style.color = '#fbbf24';
+  }
 }
 
 function getUserMediaCompat(constraints){
@@ -194,9 +215,15 @@ async function startMobileCamera(){
           if(!r) return;
           const d = await r.json().catch(()=>null);
           if(d && d.status === 'ok'){
-            document.getElementById('res-label').textContent = CLASS_LABELS[d.label] || d.label;
-            document.getElementById('res-conf').textContent = d.confidence;
+            if(Number(d.button_count) === 0){
+              document.getElementById('res-label').textContent = 'No coconut buttons found';
+              document.getElementById('res-conf').textContent = '—';
+            } else {
+              document.getElementById('res-label').textContent = CLASS_LABELS[d.label] || d.label;
+              document.getElementById('res-conf').textContent = d.confidence;
+            }
             document.getElementById('res-time').textContent = new Date().toLocaleTimeString();
+            updateButtonStatus(d.button_count);
           }
         } finally {
           mobilePushInFlight = false;
@@ -315,6 +342,11 @@ function triggerMobileCapture(){
   document.getElementById('mobile-file').click();
 }
 
+function triggerMobileUpload(){
+  setSourceMobile();
+  document.getElementById('mobile-upload').click();
+}
+
 async function sendCapturedFile(file){
   if(!file) return;
   await setSourceMobile();
@@ -324,9 +356,15 @@ async function sendCapturedFile(file){
     const r = await fetchWithTimeout('/api/camera/mobile_frame', { method:'POST', body: fd }, 12000);
     const d = await r.json();
     if(d.status === 'ok'){
-      document.getElementById('res-label').textContent = CLASS_LABELS[d.label] || d.label;
-      document.getElementById('res-conf').textContent = d.confidence;
+      if(Number(d.button_count) === 0){
+        document.getElementById('res-label').textContent = 'No coconut buttons found';
+        document.getElementById('res-conf').textContent = '—';
+      } else {
+        document.getElementById('res-label').textContent = CLASS_LABELS[d.label] || d.label;
+        document.getElementById('res-conf').textContent = d.confidence;
+      }
       document.getElementById('res-time').textContent = new Date().toLocaleTimeString();
+      updateButtonStatus(d.button_count);
       setMobileMessage(`Captured: ${CLASS_LABELS[d.label] || d.label} (${d.confidence})`, '#34d399');
     }else{
       setMobileMessage('Capture failed, try again.', '#f87171');

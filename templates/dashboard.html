@@ -93,6 +93,7 @@
         <span id="conf-text" style="font-size:1.4rem;font-weight:700;font-family:'JetBrains Mono',monospace;color:#e2e8f0;">—</span>
       </div>
       <div style="font-size:0.68rem;color:#334155;" id="ts-text">—</div>
+      <div id="button-status" style="font-size:0.7rem;color:#94a3b8;margin-top:6px;">Coconut buttons: —</div>
     </div>
 
     <!-- Session counters -->
@@ -213,13 +214,28 @@ window._onStatus = function(d){
 
   // Badge
   const badge = document.getElementById('label-badge');
-  badge.textContent = CLASS_LABELS[d.label] || d.label;
-  badge.className = `label-badge lbl-${d.label}`;
+  const btnCount = Number(d.button_count);
+  const noButtons = Number.isFinite(btnCount) && btnCount === 0;
+  badge.textContent = noButtons ? 'No coconut buttons found' : (CLASS_LABELS[d.label] || d.label);
+  badge.className = `label-badge lbl-${noButtons ? 'not_pollinated' : d.label}`;
 
   // Confidence
   document.getElementById('conf-text').textContent =
-    d.label==='initializing' ? '—' : `${(d.confidence*100).toFixed(1)}%`;
+    (d.label==='initializing' || noButtons) ? '—' : `${(d.confidence*100).toFixed(1)}%`;
   document.getElementById('ts-text').textContent = d.timestamp || '';
+
+  // Coconut buttons
+  const btnEl = document.getElementById('button-status');
+  if (!Number.isFinite(btnCount)) {
+    btnEl.textContent = 'Coconut buttons: —';
+    btnEl.style.color = '#94a3b8';
+  } else if (btnCount > 0) {
+    btnEl.textContent = `Coconut buttons: ${btnCount}`;
+    btnEl.style.color = '#34d399';
+  } else {
+    btnEl.textContent = 'No coconut buttons found';
+    btnEl.style.color = '#fbbf24';
+  }
 
   // Proba bars
   if(d.probs){

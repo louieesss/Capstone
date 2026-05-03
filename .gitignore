@@ -15,6 +15,13 @@ build/
 venv/
 env/
 
+# Secrets and local tunnel files
+.env
+.env.*
+!.env.example
+.cloudflared/
+cloudflared.log
+
 # IDE
 .vscode/
 .idea/

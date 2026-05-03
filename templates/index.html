@@ -168,6 +168,7 @@
           </span>
           <span id="confidence-text" class="text-slate-400 text-sm font-mono">—</span>
         </div>
+        <div id="button-status" class="text-xs text-slate-400 mb-2">Coconut buttons: —</div>
         <!-- Probability bars -->
         <div class="space-y-2">
           {% for cname in class_names %}
@@ -262,14 +263,31 @@ async function pollStatus() {
 
     // Update label badge
     const badge = document.getElementById('label-badge');
+    const btnCount = Number(d.button_count);
+    const noButtons = Number.isFinite(btnCount) && btnCount === 0;
     badge.textContent = d.label === 'initializing' ? 'Initializing…'
-                         : (CLASS_LABELS[d.label] || d.label.toUpperCase());
-    badge.className = `badge-${d.label} px-3 py-1 rounded-full text-sm font-bold tracking-wide`;
+                         : (noButtons ? 'No coconut buttons found'
+                            : (CLASS_LABELS[d.label] || d.label.toUpperCase()));
+    const badgeKey = noButtons ? 'not_pollinated' : d.label;
+    badge.className = `badge-${badgeKey} px-3 py-1 rounded-full text-sm font-bold tracking-wide`;
 
     // Confidence
     const confEl = document.getElementById('confidence-text');
-    confEl.textContent = d.label === 'initializing' ? '—'
+    confEl.textContent = (d.label === 'initializing' || noButtons) ? '—'
                           : `${(d.confidence * 100).toFixed(1)}% confidence`;
+
+    // Coconut buttons
+    const btnEl = document.getElementById('button-status');
+    if (!Number.isFinite(btnCount)) {
+      btnEl.textContent = 'Coconut buttons: —';
+      btnEl.className = 'text-xs text-slate-400 mb-2';
+    } else if (btnCount > 0) {
+      btnEl.textContent = `Coconut buttons: ${btnCount}`;
+      btnEl.className = 'text-xs text-green-400 mb-2';
+    } else {
+      btnEl.textContent = 'No coconut buttons found';
+      btnEl.className = 'text-xs text-amber-400 mb-2';
+    }
 
     // Probability bars
     if (d.probs) {

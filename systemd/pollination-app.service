@@ -1,0 +1,19 @@
+[Unit]
+Description=Pollination Monitoring Flask App
+After=network-online.target mysql.service mariadb.service
+Wants=network-online.target pollination-cloudflare-quick.service
+Before=pollination-cloudflare-quick.service
+
+[Service]
+Type=simple
+User=root1
+Group=root1
+WorkingDirectory=/home/root1/Documents/Capstone
+Environment=PYTHONUNBUFFERED=1
+Environment=APP_PORT=5000
+ExecStart=/home/root1/Documents/Capstone/.venv/bin/python /home/root1/Documents/Capstone/app.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

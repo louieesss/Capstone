@@ -301,6 +301,19 @@ def detect_button_hitboxes(bgr):
     max_count = int(CONFIG['hitbox_max_count'])
     return [(x, y, w, h) for (x, y, w, h, _) in boxes[:max_count]]
 
+
+def get_roi(frame):
+    """Crop a central region to reduce background false positives."""
+    h, w = frame.shape[:2]
+    pad_x = int(w * float(os.getenv('ROI_PAD_X_PCT', '0.15')))
+    pad_y = int(h * float(os.getenv('ROI_PAD_Y_PCT', '0.15')))
+    pad_x = max(0, min(pad_x, max(0, (w // 2) - 1)))
+    pad_y = max(0, min(pad_y, max(0, (h // 2) - 1)))
+    if pad_x == 0 and pad_y == 0:
+        return frame, 0, 0
+    return frame[pad_y:h - pad_y, pad_x:w - pad_x], pad_x, pad_y
+
+
 # ─── SNAPSHOT ────────────────────────────────────────────────────────────────
 def save_snapshot(frame, label, conf):
     global total_snaps
@@ -631,12 +644,23 @@ def receive_mobile_frame():
         conf = 0.0
         probs = {c: 0.0 for c in CLASS_NAMES}
         
-        l, c, p = predict(frame)
+        roi, off_x, off_y = get_roi(frame)
+        l, c, p = predict(roi)
         if c >= CONFIG['confidence_threshold']:
             label, conf, probs = l, c, p
+        else:
+            label = CLASS_NAMES[0]
+            conf = 0.0
+            probs = {cname: 0.0 for cname in CLASS_NAMES}
         
         ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        button_boxes = detect_button_hitboxes(frame) if CONFIG['show_hitboxes'] else []
+        if CONFIG['show_hitboxes'] and conf >= CONFIG['confidence_threshold']:
+            button_boxes = detect_button_hitboxes(roi)
+            if off_x or off_y:
+                button_boxes = [(x + off_x, y + off_y, w_box, h_box)
+                                for (x, y, w_box, h_box) in button_boxes]
+        else:
+            button_boxes = []
         mobile_disp = frame.copy()
         for x, y, w_box, h_box in button_boxes:
             cv2.rectangle(mobile_disp, (x, y), (x + w_box, y + h_box), (0, 255, 255), 2)
