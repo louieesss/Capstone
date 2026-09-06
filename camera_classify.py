@@ -26,6 +26,7 @@ MODEL_PATH  = r"C:\Users\Admin\Desktop\CAPS\best_model_checkpoint.pth"
 CAMERA_ID   = 0          # 0 = default webcam, change if you have multiple
 DISPLAY_FPS = True
 SNAPSHOT_DIR = r"C:\Users\Admin\Desktop\CAPS\snapshots"
+BLOCKED_LABEL = 'blocked'
 
 # ─── CLASS DISPLAY ───────────────────────────────────────────────────────────
 CLASS_LABELS = {
@@ -43,7 +44,10 @@ CLASS_ICONS = {
     'not_pollinated': '[--]',
     'pollinated':     '[**]',
     'pollinating':    '[~~]',
+    BLOCKED_LABEL:    '[!!]',
 }
+CLASS_COLORS_BGR[BLOCKED_LABEL] = (150, 150, 150)
+CLASS_LABELS[BLOCKED_LABEL] = 'NO VALID SUBJECT'
 
 # ─── LOAD MODEL ──────────────────────────────────────────────────────────────
 def load_model():
@@ -92,6 +96,41 @@ def predict(frame_bgr, model, tf, device, class_names):
     probs  = torch.softmax(logits, dim=1).squeeze().cpu().numpy()
     idx    = int(np.argmax(probs))
     return class_names[idx], float(probs[idx]), probs
+
+
+HUMAN_DETECTOR = cv2.HOGDescriptor()
+HUMAN_DETECTOR.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
+
+
+def detect_human(frame_bgr):
+    h, w = frame_bgr.shape[:2]
+    if w > 480:
+        scale = 480.0 / float(w)
+        frame_bgr = cv2.resize(frame_bgr, (480, max(2, int(h * scale))))
+    rects, _ = HUMAN_DETECTOR.detectMultiScale(
+        frame_bgr,
+        winStride=(8, 8),
+        padding=(8, 8),
+        scale=1.05,
+    )
+    return len(rects) > 0
+
+
+def frame_has_valid_subject(frame_bgr):
+    if detect_human(frame_bgr):
+        return False, 'human detected'
+
+    h, w = frame_bgr.shape[:2]
+    roi = frame_bgr[h // 4: 3 * h // 4, w // 4: 3 * w // 4]
+    if roi.size == 0:
+        return False, 'no valid subject detected'
+
+    gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+    texture = float(cv2.Laplacian(gray, cv2.CV_64F).var())
+    edge_ratio = float(cv2.Canny(gray, 80, 160).mean() / 255.0)
+    if texture < 35.0 or edge_ratio < 0.015:
+        return False, 'no coconut/flower detected'
+    return True, 'subject ready'
 
 
 # ─── DRAW OVERLAY ────────────────────────────────────────────────────────────
@@ -167,6 +206,7 @@ def main():
 
     # Warmup
     label, confidence, probs = class_names[0], 0.0, np.ones(len(class_names)) / len(class_names)
+    subject_status = 'initializing'
 
     t_prev = time.time()
     fps    = 0.0
@@ -185,7 +225,14 @@ def main():
         frame_count += 1
 
         if not paused and frame_count % INFER_EVERY == 0:
-            label, confidence, probs = predict(frame, model, tf, device, class_names)
+            valid_subject, subject_status = frame_has_valid_subject(frame)
+            if valid_subject:
+                label, confidence, probs = predict(frame, model, tf, device, class_names)
+            else:
+                label = BLOCKED_LABEL
+                confidence = 0.0
+                probs = np.zeros(len(class_names), dtype=np.float32)
+                print(f"  Blocking classification: {subject_status}")
 
         # FPS calculation
         now  = time.time()
@@ -194,6 +241,10 @@ def main():
 
         display = draw_overlay(frame.copy(), label, confidence, probs,
                                class_names, fps=fps, paused=paused)
+
+        if label == BLOCKED_LABEL:
+            cv2.putText(display, subject_status.upper(), (12, 78),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200, 200, 200), 1, cv2.LINE_AA)
 
         cv2.imshow("Pollination Classifier  —  Live Camera", display)
 

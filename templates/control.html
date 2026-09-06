@@ -87,6 +87,16 @@
     </div>
 
     <div class="ctrl-row">
+      <label class="ctrl-label">Digital Zoom</label>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-gray" onclick="zoomOut()">➖ Zoom Out</button>
+        <button class="btn btn-gray" onclick="zoomReset()">⭮ Reset</button>
+        <button class="btn btn-gray" onclick="zoomIn()">➕ Zoom In</button>
+        <span id="zoom-value" style="margin-left:auto;color:#60a5fa;font-family:'JetBrains Mono',monospace;">{{ '%.1f'|format(config.zoom_factor or 1.0) }}x</span>
+      </div>
+    </div>
+
+    <div class="ctrl-row">
       <label class="ctrl-label">
         Inference Every N Frames &nbsp;<span id="lbl-infer" style="color:#60a5fa;">{{ config.infer_every }}</span>
         <span style="color:#334155;font-size:0.65rem;"> (lower = faster updates, more CPU)</span>
@@ -143,6 +153,13 @@
              value="{{ config.max_history }}" min="10" max="1000"/>
     </div>
 
+    <div class="ctrl-row">
+      <label class="ctrl-label">Snapshot Interval (hours)</label>
+      <input type="number" id="cfg-snapshot_hours" class="ctrl-input"
+             value="{{ '%.1f'|format((config.snapshot_interval_sec or 10800) / 3600) }}"
+             min="1" step="0.5"/>
+    </div>
+
     <button class="btn btn-blue" onclick="saveConfig()" style="width:100%;margin-top:6px;">
       💾 Apply Detection Settings
     </button>
@@ -158,7 +175,7 @@
       </tr>
       <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
         <td style="padding:7px 0;color:#475569;">Classes</td>
-        <td style="color:#94a3b8;">Pollinating · Pollinated · Not Pollinated</td>
+        <td style="color:#94a3b8;">Pollinating · Pollinated · Not Pollinating</td>
       </tr>
       <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
         <td style="padding:7px 0;color:#475569;">Val Accuracy</td>
@@ -267,10 +284,38 @@ async function saveConfig(){
     stable_frames:parseInt(document.getElementById('cfg-stable_frames').value),
     max_history:  parseInt(document.getElementById('cfg-max_history').value),
     confidence_threshold: parseInt(document.getElementById('cfg-confidence_threshold').value)/100,
+    snapshot_interval_hours: parseFloat(document.getElementById('cfg-snapshot_hours').value || '3'),
   };
   const r=await fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(cfg)});
   const d=await r.json();
   if(d.status==='ok') showToast('Settings saved ✓', '#34d399');
+}
+
+async function zoomIn(){
+  const r = await fetch('/api/camera/zoom',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'in'})});
+  const d = await r.json();
+  if(d.status==='ok'){
+    document.getElementById('zoom-value').textContent = `${d.zoom_factor.toFixed(1)}x`;
+    showToast(`Zoom ${d.zoom_factor.toFixed(1)}x`, '#60a5fa');
+  }
+}
+
+async function zoomOut(){
+  const r = await fetch('/api/camera/zoom',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'out'})});
+  const d = await r.json();
+  if(d.status==='ok'){
+    document.getElementById('zoom-value').textContent = `${d.zoom_factor.toFixed(1)}x`;
+    showToast(`Zoom ${d.zoom_factor.toFixed(1)}x`, '#60a5fa');
+  }
+}
+
+async function zoomReset(){
+  const r = await fetch('/api/camera/zoom',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'reset'})});
+  const d = await r.json();
+  if(d.status==='ok'){
+    document.getElementById('zoom-value').textContent = `${d.zoom_factor.toFixed(1)}x`;
+    showToast('Zoom reset', '#60a5fa');
+  }
 }
 
 async function clearAll(){

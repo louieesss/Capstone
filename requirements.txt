@@ -25,3 +25,11 @@ smbus2
 # MySQL database
 mysql-connector-python>=9.0.0
 python-dotenv>=1.0.0
+
+# Web backend / runtime
+flask>=2.3.0
+flask-cors>=4.0.0
+opencv-python>=4.8.0
+
+# Optional cloud database logging
+supabase>=2.7.0

@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "Pollination Mobile",
+    "slug": "pollination-mobile",
+    "version": "1.0.0",
+    "assetBundlePatterns": ["**/*"],
+    "platforms": ["ios", "android", "web"],
+    "ios": {
+      "supportsTabletMode": true,
+      "bundleIdentifier": "com.pollination.mobile"
+    },
+    "android": {
+      "package": "com.pollination.mobile"
+    },
+    "web": {
+      "output": "static"
+    },
+    "plugins": [
+      ["expo-camera"],
+      ["expo-image-picker"]
+    ]
+  }
+}

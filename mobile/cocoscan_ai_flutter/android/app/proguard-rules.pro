@@ -1,0 +1,3 @@
+-keep class org.tensorflow.lite.** { *; }
+-keep class org.tensorflow.lite.support.** { *; }
+-keep class io.flutter.embedding.** { *; }

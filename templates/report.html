@@ -35,8 +35,8 @@
     <div class="stat-label">Dominant Class</div>
     {% set dominant = counts | dictsort(by='value') | last %}
     <div class="stat-val" style="color:
-      {% if dominant[0]=='pollinating' %}#34d399
-      {% elif dominant[0]=='pollinated' %}#60a5fa
+      {% if dominant[0]=='pollinating' %}#fbbf24
+      {% elif dominant[0]=='pollinated' %}#34d399
       {% else %}#f87171{% endif %};">
       {{ dominant[1] if total > 0 else '—' }}
     </div>
@@ -156,11 +156,11 @@ const ctx = document.getElementById('donut-chart').getContext('2d');
 new Chart(ctx, {
   type: 'doughnut',
   data: {
-    labels: ['Pollinating', 'Pollinated', 'Not Pollinated'],
+    labels: ['Pollinating', 'Pollinated', 'Not Pollinating'],
     datasets:[{
       data: [{{ counts.pollinating }}, {{ counts.pollinated }}, {{ counts.not_pollinated }}],
-      backgroundColor:['rgba(52,211,153,0.7)','rgba(96,165,250,0.7)','rgba(248,113,113,0.7)'],
-      borderColor:['#34d399','#60a5fa','#f87171'],
+      backgroundColor:['rgba(251,191,36,0.7)','rgba(52,211,153,0.7)','rgba(248,113,113,0.7)'],
+      borderColor:['#fbbf24','#34d399','#f87171'],
       borderWidth:2, hoverOffset:6
     }]
   },

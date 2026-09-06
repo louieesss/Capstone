@@ -1,0 +1,19 @@
+{
+  "expo": {
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Pollination Monitor to access your camera"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Pollination Monitor to access your photos",
+          "cameraPermission": "Allow Pollination Monitor to access your camera"
+        }
+      ]
+    ]
+  }
+}

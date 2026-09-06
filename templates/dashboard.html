@@ -5,47 +5,143 @@
 
 {% block content %}
 <style>
-  .dash-grid{display:grid;grid-template-columns:1fr 320px;grid-template-rows:auto auto;gap:12px;height:calc(100vh - 80px);}
-  .cam-panel{grid-row:1/3;display:flex;flex-direction:column;gap:10px;min-height:0;}
-  .right-top{display:flex;flex-direction:column;gap:10px;}
+  .dash-grid {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    grid-template-rows: auto auto;
+    gap: 12px;
+    height: calc(100vh - 80px);
+  }
+
+  .cam-panel {
+    grid-row: 1/3;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 0;
+  }
+
+  .right-top {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
 
   /* Label badge */
-  .label-badge{
-    display:inline-block;padding:6px 16px;border-radius:20px;
-    font-size:0.78rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;
-    border:1px solid currentColor;
+  .label-badge {
+    display: inline-block;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    border: 1px solid currentColor;
   }
-  .lbl-pollinating   {color:#34d399;background:rgba(52,211,153,0.1);}
-  .lbl-pollinated    {color:#60a5fa;background:rgba(96,165,250,0.1);}
-  .lbl-not_pollinated{color:#f87171;background:rgba(248,113,113,0.1);}
-  .lbl-initializing  {color:#64748b;background:rgba(100,116,139,0.1);}
+
+  .lbl-pollinating {
+    color: #fbbf24;
+    background: rgba(251, 191, 36, 0.1);
+  }
+
+  .lbl-pollinated {
+    color: #34d399;
+    background: rgba(52, 211, 153, 0.1);
+  }
+
+  .lbl-not_pollinated {
+    color: #f87171;
+    background: rgba(248, 113, 113, 0.1);
+  }
+
+  .lbl-initializing {
+    color: #64748b;
+    background: rgba(100, 116, 139, 0.1);
+  }
 
   /* Proba bar */
-  .pbar-pollinating   {background:linear-gradient(90deg,#065f46,#34d399);}
-  .pbar-pollinated    {background:linear-gradient(90deg,#1e3a8a,#60a5fa);}
-  .pbar-not_pollinated{background:linear-gradient(90deg,#7f1d1d,#f87171);}
-
-  /* Counter */
-  .ctr{background:rgba(0,10,25,0.7);border:1px solid rgba(255,255,255,0.06);border-radius:8px;text-align:center;padding:10px 6px;}
-  .ctr-val{font-size:1.9rem;font-weight:700;font-family:'JetBrains Mono',monospace;line-height:1;}
-
-  /* Sensor cards */
-  .sensor-card{background:rgba(0,10,25,0.7);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:10px;}
-  .sensor-icon{font-size:1.4rem;line-height:1;flex-shrink:0;}
-  .sensor-val{font-size:1.35rem;font-weight:700;font-family:'JetBrains Mono',monospace;line-height:1;}
-  .sensor-label{font-size:0.63rem;color:#64748b;margin-top:2px;letter-spacing:0.04em;text-transform:uppercase;}
-  .sensor-status{font-size:0.6rem;padding:2px 6px;border-radius:10px;font-weight:600;margin-top:3px;display:inline-block;}
-  .s-ok   {background:rgba(52,211,153,0.15);color:#34d399;}
-  .s-warn {background:rgba(251,191,36,0.15);color:#fbbf24;}
-  .s-bad  {background:rgba(248,113,113,0.15);color:#f87171;}
-
-  @media (max-width: 1100px){
-    .dash-grid{grid-template-columns:1fr;grid-template-rows:auto;height:auto;}
-    .cam-panel{grid-row:auto;}
+  .pbar-pollinating {
+    background: linear-gradient(90deg, #78350f, #fbbf24);
   }
 
-  @media (max-width: 680px){
-    .ctr-val{font-size:1.45rem;}
+  .pbar-pollinated {
+    background: linear-gradient(90deg, #065f46, #34d399);
+  }
+
+  .pbar-not_pollinated {
+    background: linear-gradient(90deg, #7f1d1d, #f87171);
+  }
+
+  /* Counter */
+  .ctr {
+    background: rgba(0, 10, 25, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 8px;
+    text-align: center;
+    padding: 10px 6px;
+  }
+
+  .ctr-val {
+    font-size: 1.9rem;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    line-height: 1;
+  }
+
+  /* Sensor cards */
+  .sensor-card {
+    background: rgba(0, 10, 25, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .sensor-icon {
+    font-size: 1.4rem;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+
+  .sensor-val {
+    font-size: 1.35rem;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    line-height: 1;
+  }
+
+  .sensor-label {
+    font-size: 0.63rem;
+    color: #64748b;
+    margin-top: 2px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .sensor-status {
+    font-size: 0.6rem;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-weight: 600;
+    margin-top: 3px;
+    display: inline-block;
+  }
+
+  .s-ok {
+    background: rgba(52, 211, 153, 0.15);
+    color: #34d399;
+  }
+
+  .s-warn {
+    background: rgba(251, 191, 36, 0.15);
+    color: #fbbf24;
+  }
+
+  .s-bad {
+    background: rgba(248, 113, 113, 0.15);
+    color: #f87171;
   }
 </style>
 
@@ -54,12 +150,23 @@
   <!-- ── Camera feed (left, tall) ── -->
   <div class="cam-panel">
     <div class="panel" style="flex:1;display:flex;flex-direction:column;min-height:0;">
-      <div class="panel-head">Live Camera Feed</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px 0;">
+        <div class="panel-head" style="padding:0;">Live Camera Feed</div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <button onclick="dashZoomOut()"
+            style="font-size:0.65rem;padding:3px 8px;border:1px solid #334155;border-radius:5px;background:#0b1322;color:#94a3b8;cursor:pointer;">−</button>
+          <span id="zoom-badge"
+            style="font-size:0.65rem;color:#60a5fa;font-family:'JetBrains Mono',monospace;min-width:34px;text-align:center;">1.0x</span>
+          <button onclick="dashZoomIn()"
+            style="font-size:0.65rem;padding:3px 8px;border:1px solid #334155;border-radius:5px;background:#0b1322;color:#94a3b8;cursor:pointer;">+</button>
+        </div>
+      </div>
       <div style="flex:1;background:#000;overflow:hidden;border-radius:0 0 10px 10px;position:relative;min-height:0;">
-        <img id="feed" src="/video_feed"
-             style="width:100%;height:100%;object-fit:contain;display:block;"
-             onerror="this.style.display='none'"/>
-        <div id="no-feed" style="display:none;position:absolute;inset:0;display:flex;align-items:center;justify-content:center;">
+        <img id="feed" src="/video_feed" style="width:100%;height:100%;object-fit:contain;display:block;"
+          onerror="this.style.display='none'" />
+        <div id="no-feed"
+          style="display:none;position:absolute;inset:0;display:flex;align-items:center;justify-content:center;">
+          <p style="color:#334155;font-size:0.8rem;">Camera not running</p>
         </div>
       </div>
     </div>
@@ -75,7 +182,7 @@
         </div>
         <div style="background:#0f1c2e;border-radius:4px;height:8px;overflow:hidden;">
           <div id="pbar-{{ cname }}" class="pbar-{{ cname }}"
-               style="height:100%;width:0%;border-radius:4px;transition:width 0.4s ease;"></div>
+            style="height:100%;width:0%;border-radius:4px;transition:width 0.4s ease;"></div>
         </div>
       </div>
       {% endfor %}
@@ -90,10 +197,10 @@
       <div class="panel-head" style="padding:0 0 10px;">Current Classification</div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
         <span id="label-badge" class="label-badge lbl-initializing">Initializing…</span>
-        <span id="conf-text" style="font-size:1.4rem;font-weight:700;font-family:'JetBrains Mono',monospace;color:#e2e8f0;">—</span>
+        <span id="conf-text"
+          style="font-size:1.4rem;font-weight:700;font-family:'JetBrains Mono',monospace;color:#e2e8f0;">—</span>
       </div>
       <div style="font-size:0.68rem;color:#334155;" id="ts-text">—</div>
-      <div id="button-status" style="font-size:0.7rem;color:#94a3b8;margin-top:6px;">Coconut buttons: —</div>
     </div>
 
     <!-- Session counters -->
@@ -101,16 +208,16 @@
       <div class="panel-head" style="padding:0 0 10px;">Session Detections</div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
         <div class="ctr">
-          <div class="ctr-val c-green" id="cnt-pollinating">0</div>
-          <div style="font-size:0.6rem;color:#34d399;margin-top:4px;">Pollinating</div>
+          <div class="ctr-val" style="color:#fbbf24;" id="cnt-pollinating">0</div>
+          <div style="font-size:0.6rem;color:#fbbf24;margin-top:4px;">Pollinating</div>
         </div>
         <div class="ctr">
-          <div class="ctr-val c-blue" id="cnt-pollinated">0</div>
-          <div style="font-size:0.6rem;color:#60a5fa;margin-top:4px;">Pollinated</div>
+          <div class="ctr-val" style="color:#34d399;" id="cnt-pollinated">0</div>
+          <div style="font-size:0.6rem;color:#34d399;margin-top:4px;">Pollinated</div>
         </div>
         <div class="ctr">
-          <div class="ctr-val c-red" id="cnt-not_pollinated">0</div>
-          <div style="font-size:0.6rem;color:#f87171;margin-top:4px;">Not Pollinated</div>
+          <div class="ctr-val" style="color:#f87171;" id="cnt-not_pollinated">0</div>
+          <div style="font-size:0.6rem;color:#f87171;margin-top:4px;">Not Poll.</div>
         </div>
       </div>
       <div style="margin-top:10px;display:flex;justify-content:space-between;font-size:0.68rem;color:#334155;">
@@ -164,14 +271,15 @@
         </div>
 
       </div>
-      <div style="text-align:right;font-size:0.6rem;color:#1e293b;margin-top:6px;">Updated <span id="sv-updated">—</span></div>
+      <div style="text-align:right;font-size:0.6rem;color:#1e293b;margin-top:6px;">Updated <span
+          id="sv-updated">—</span></div>
     </div>
 
     <!-- Latest snapshots (mini gallery) -->
     <div class="panel" style="padding:12px 14px;flex:1;overflow:hidden;">
       <div class="panel-head" style="padding:0 0 8px;">Latest Auto-Snapshots</div>
       <div id="mini-gallery"
-           style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;overflow-y:auto;max-height:220px;">
+        style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;overflow-y:auto;max-height:220px;">
         <p id="no-snaps" style="grid-column:1/-1;text-align:center;color:#334155;font-size:0.72rem;padding:20px 0;">
           Auto-snapshots appear here…
         </p>
@@ -191,7 +299,9 @@
             </tr>
           </thead>
           <tbody id="hist-body">
-            <tr><td colspan="3" style="color:#334155;padding:8px 0;">No data yet…</td></tr>
+            <tr>
+              <td colspan="3" style="color:#334155;padding:8px 0;">No data yet…</td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -200,131 +310,127 @@
 
 </div>
 
-<script id="dash-class-labels-json" type="application/json">{{ class_labels | tojson }}</script>
-<script id="dash-class-hex-json" type="application/json">{{ class_hex | tojson }}</script>
 <script>
-const CLASS_LABELS = JSON.parse(document.getElementById('dash-class-labels-json').textContent || '{}');
-const CLASS_HEX    = JSON.parse(document.getElementById('dash-class-hex-json').textContent || '{}');
-let knownSnaps = new Set();
-let counts = {pollinating:0, pollinated:0, not_pollinated:0};
+  const CLASS_LABELS = {{ class_labels | tojson }};
+  const CLASS_HEX = {{ class_hex    | tojson }};
+  let knownSnaps = new Set();
+  let counts = { pollinating: 0, pollinated: 0, not_pollinated: 0 };
 
-// Status update via global hook
-window._onStatus = function(d){
-  if(!d || d.label==='initializing') return;
+  // Status update via global hook
+  window._onStatus = function (d) {
+    if (!d || d.label === 'initializing') return;
 
-  // Badge
-  const badge = document.getElementById('label-badge');
-  const btnCount = Number(d.button_count);
-  const noButtons = Number.isFinite(btnCount) && btnCount === 0;
-  badge.textContent = noButtons ? 'No coconut buttons found' : (CLASS_LABELS[d.label] || d.label);
-  badge.className = `label-badge lbl-${noButtons ? 'not_pollinated' : d.label}`;
-
-  // Confidence
-  document.getElementById('conf-text').textContent =
-    (d.label==='initializing' || noButtons) ? '—' : `${(d.confidence*100).toFixed(1)}%`;
-  document.getElementById('ts-text').textContent = d.timestamp || '';
-
-  // Coconut buttons
-  const btnEl = document.getElementById('button-status');
-  if (!Number.isFinite(btnCount)) {
-    btnEl.textContent = 'Coconut buttons: —';
-    btnEl.style.color = '#94a3b8';
-  } else if (btnCount > 0) {
-    btnEl.textContent = `Coconut buttons: ${btnCount}`;
-    btnEl.style.color = '#34d399';
-  } else {
-    btnEl.textContent = 'No coconut buttons found';
-    btnEl.style.color = '#fbbf24';
-  }
-
-  // Proba bars
-  if(d.probs){
-    for(const [cn,p] of Object.entries(d.probs)){
-      const bar=document.getElementById(`pbar-${cn}`);
-      const txt=document.getElementById(`ptxt-${cn}`);
-      if(bar) bar.style.width=`${(p*100).toFixed(1)}%`;
-      if(txt) txt.textContent=`${(p*100).toFixed(1)}%`;
+    if (d.zoom_factor !== undefined) {
+      const zb = document.getElementById('zoom-badge');
+      if (zb) zb.textContent = `${Number(d.zoom_factor).toFixed(1)}x`;
     }
-  }
-  if(d.total_snaps !== undefined)
-    document.getElementById('cnt-snaps').textContent = d.total_snaps;
 
-  // Sensors
-  if(d.sensors){
-    const s = d.sensors;
+    // Badge
+    const badge = document.getElementById('label-badge');
+    badge.textContent = CLASS_LABELS[d.label] || d.label;
+    badge.className = `label-badge lbl-${d.label}`;
 
-    // Temperature (optimal 15–35°C for pollination)
-    document.getElementById('sv-temp').textContent = s.temperature ?? '—';
-    document.getElementById('sv-updated').textContent = s.updated || '—';
-    const tEl = document.getElementById('ss-temp');
-    if(s.temperature < 15 || s.temperature > 38){tEl.className='sensor-status s-bad'; tEl.textContent='Too Extreme';}
-    else if(s.temperature < 18 || s.temperature > 35){tEl.className='sensor-status s-warn'; tEl.textContent='Warning';}
-    else{tEl.className='sensor-status s-ok'; tEl.textContent='Optimal';}
+    // Confidence
+    document.getElementById('conf-text').textContent =
+      d.label === 'initializing' ? '—' : `${(d.confidence * 100).toFixed(1)}%`;
+    document.getElementById('ts-text').textContent = d.timestamp || '';
 
-    // Humidity (optimal 40–80 %RH)
-    document.getElementById('sv-hum').textContent = s.humidity ?? '—';
-    const hEl = document.getElementById('ss-hum');
-    if(s.humidity < 25 || s.humidity > 90){hEl.className='sensor-status s-bad'; hEl.textContent='Too Extreme';}
-    else if(s.humidity < 40 || s.humidity > 80){hEl.className='sensor-status s-warn'; hEl.textContent='Low/High';}
-    else{hEl.className='sensor-status s-ok'; hEl.textContent='Optimal';}
+    // Proba bars
+    if (d.probs) {
+      for (const [cn, p] of Object.entries(d.probs)) {
+        const bar = document.getElementById(`pbar-${cn}`);
+        const txt = document.getElementById(`ptxt-${cn}`);
+        if (bar) bar.style.width = `${(p * 100).toFixed(1)}%`;
+        if (txt) txt.textContent = `${(p * 100).toFixed(1)}%`;
+      }
+    }
+    if (d.total_snaps !== undefined)
+      document.getElementById('cnt-snaps').textContent = d.total_snaps;
 
-    // Light (optimal 200–800 lux for indoor observation)
-    document.getElementById('sv-light').textContent = s.light ?? '—';
-    const lEl = document.getElementById('ss-light');
-    if(s.light < 50){lEl.className='sensor-status s-bad'; lEl.textContent='Too Dark';}
-    else if(s.light < 200 || s.light > 900){lEl.className='sensor-status s-warn'; lEl.textContent='Low/High';}
-    else{lEl.className='sensor-status s-ok'; lEl.textContent='Good';}
-  }
-};
+    // Sensors
+    if (d.sensors) {
+      const s = d.sensors;
 
-async function pollHistory(){
-  try{
-    const r=await fetch('/api/history');
-    const items=await r.json();
-    if(!items.length) return;
-    // Counts
-    counts={pollinating:0,pollinated:0,not_pollinated:0};
-    items.forEach(i=>{if(counts[i.label]!==undefined) counts[i.label]++;});
-    document.getElementById('cnt-pollinating').textContent=counts.pollinating;
-    document.getElementById('cnt-pollinated').textContent=counts.pollinated;
-    document.getElementById('cnt-not_pollinated').textContent=counts.not_pollinated;
-    document.getElementById('cnt-total').textContent=items.length;
+      // Temperature (optimal 15–35°C for pollination)
+      document.getElementById('sv-temp').textContent = s.temperature ?? '—';
+      document.getElementById('sv-updated').textContent = s.updated || '—';
+      const tEl = document.getElementById('ss-temp');
+      if (s.temperature < 15 || s.temperature > 38) { tEl.className = 'sensor-status s-bad'; tEl.textContent = 'Too Extreme'; }
+      else if (s.temperature < 18 || s.temperature > 35) { tEl.className = 'sensor-status s-warn'; tEl.textContent = 'Warning'; }
+      else { tEl.className = 'sensor-status s-ok'; tEl.textContent = 'Optimal'; }
 
-    // History table (latest 8)
-    const tbody=document.getElementById('hist-body');
-    tbody.innerHTML='';
-    items.slice(0,8).forEach(item=>{
-      const tr=document.createElement('tr');
-      tr.style.borderBottom='1px solid rgba(255,255,255,0.04)';
-      const col=CLASS_HEX[item.label]||'#94a3b8';
-      tr.innerHTML=`<td style="padding:4px 0;color:${col};font-weight:600;">${CLASS_LABELS[item.label]||item.label}</td>
+      // Humidity (optimal 40–80 %RH)
+      document.getElementById('sv-hum').textContent = s.humidity ?? '—';
+      const hEl = document.getElementById('ss-hum');
+      if (s.humidity < 25 || s.humidity > 90) { hEl.className = 'sensor-status s-bad'; hEl.textContent = 'Too Extreme'; }
+      else if (s.humidity < 40 || s.humidity > 80) { hEl.className = 'sensor-status s-warn'; hEl.textContent = 'Low/High'; }
+      else { hEl.className = 'sensor-status s-ok'; hEl.textContent = 'Optimal'; }
+
+      // Light (optimal 200–800 lux for indoor observation)
+      document.getElementById('sv-light').textContent = s.light ?? '—';
+      const lEl = document.getElementById('ss-light');
+      if (s.light < 50) { lEl.className = 'sensor-status s-bad'; lEl.textContent = 'Too Dark'; }
+      else if (s.light < 200 || s.light > 900) { lEl.className = 'sensor-status s-warn'; lEl.textContent = 'Low/High'; }
+      else { lEl.className = 'sensor-status s-ok'; lEl.textContent = 'Good'; }
+    }
+  };
+
+  async function pollHistory() {
+    try {
+      const r = await fetch('/api/history');
+      const items = await r.json();
+      if (!items.length) return;
+      // Counts
+      counts = { pollinating: 0, pollinated: 0, not_pollinated: 0 };
+      items.forEach(i => { if (counts[i.label] !== undefined) counts[i.label]++; });
+      document.getElementById('cnt-pollinating').textContent = counts.pollinating;
+      document.getElementById('cnt-pollinated').textContent = counts.pollinated;
+      document.getElementById('cnt-not_pollinated').textContent = counts.not_pollinated;
+      document.getElementById('cnt-total').textContent = items.length;
+
+      // History table (latest 8)
+      const tbody = document.getElementById('hist-body');
+      tbody.innerHTML = '';
+      items.slice(0, 8).forEach(item => {
+        const tr = document.createElement('tr');
+        tr.style.borderBottom = '1px solid rgba(255,255,255,0.04)';
+        const col = CLASS_HEX[item.label] || '#94a3b8';
+        tr.innerHTML = `<td style="padding:4px 0;color:${col};font-weight:600;">${CLASS_LABELS[item.label] || item.label}</td>
         <td style="color:#94a3b8;font-family:'JetBrains Mono',monospace;">${item.confidence}</td>
-        <td style="color:#475569;">${item.timestamp.slice(11,19)}</td>`;
-      tbody.appendChild(tr);
-    });
-  }catch(e){}
-}
+        <td style="color:#475569;">${item.timestamp.slice(11, 19)}</td>`;
+        tbody.appendChild(tr);
+      });
+    } catch (e) { }
+  }
 
-async function pollSnapshots(){
-  try{
-    const r=await fetch('/api/snapshots');
-    const snaps=await r.json();
-    if(!snaps.length) return;
-    document.getElementById('no-snaps')?.remove();
-    const g=document.getElementById('mini-gallery');
-    snaps.forEach(fn=>{
-      if(knownSnaps.has(fn)) return;
-      knownSnaps.add(fn);
-      const d=document.createElement('div');
-      d.style.cssText='aspect-ratio:1;border-radius:5px;overflow:hidden;cursor:pointer;border:1px solid rgba(255,255,255,0.06);';
-      d.innerHTML=`<img src="/snapshots/${fn}" style="width:100%;height:100%;object-fit:cover;" onclick="openLB('/snapshots/${fn}')"/>`;
-      g.prepend(d);
-    });
-  }catch(e){}
-}
+  async function pollSnapshots() {
+    try {
+      const r = await fetch('/api/snapshots');
+      const snaps = await r.json();
+      if (!snaps.length) return;
+      document.getElementById('no-snaps')?.remove();
+      const g = document.getElementById('mini-gallery');
+      snaps.forEach(fn => {
+        if (knownSnaps.has(fn)) return;
+        knownSnaps.add(fn);
+        const d = document.createElement('div');
+        d.style.cssText = 'aspect-ratio:1;border-radius:5px;overflow:hidden;cursor:pointer;border:1px solid rgba(255,255,255,0.06);';
+        d.innerHTML = `<img src="/snapshots/${fn}" style="width:100%;height:100%;object-fit:cover;" onclick="openLB('/snapshots/${fn}')"/>`;
+        g.prepend(d);
+      });
+    } catch (e) { }
+  }
 
-pollHistory(); pollSnapshots();
-setInterval(pollHistory, 2500);
-setInterval(pollSnapshots, 2500);
+  pollHistory(); pollSnapshots();
+  setInterval(pollHistory, 2500);
+  setInterval(pollSnapshots, 2500);
+
+  async function dashZoomIn() {
+    await fetch('/api/camera/zoom', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'in' }) });
+  }
+
+  async function dashZoomOut() {
+    await fetch('/api/camera/zoom', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'out' }) });
+  }
 </script>
 {% endblock %}

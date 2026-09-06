@@ -38,7 +38,7 @@ Thumbs.db
 
 # Large datasets (too large for GitHub)
 DATASETS/
-DATASETS_ORGANIZED/
+# DATASETS_ORGANIZED/
 
 # Cloned subfolders
 Capstone/
